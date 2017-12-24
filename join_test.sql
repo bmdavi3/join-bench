@@ -1,7 +1,5 @@
 \set table_num 12
-
-
-
+\set num_rows 1000
 
 
 
@@ -33,14 +31,38 @@ $function_text$ LANGUAGE plpgsql;
 SELECT create_tables(:table_num);
 
 
-
-
-    -- FOR r IN SELECT table_schema, table_name FROM information_schema.tables
-    --              WHERE table_type = 'VIEW' AND table_schema = 'public'
-    -- 		     LOOP
-    -- 		             EXECUTE 'GRANT ALL ON ' || quote_ident(r.table_schema) || '.' || quote_ident(r.table_name) || ' TO webuser';
-    -- 			         END LOOP;
-
+INSERT INTO table_1 (id)
+SELECT
+    nextval('table_1_id_seq')
+FROM
+    generate_series(1, :num_rows);
 
 
 
+DROP FUNCTION IF EXISTS populate_tables;
+CREATE FUNCTION populate_tables(integer, integer) RETURNS void AS $function_text$
+BEGIN
+
+INSERT INTO table_1 (id)
+SELECT
+    nextval('table_1_id_seq')
+FROM
+    generate_series(1, $2);
+
+
+FOR i IN 2..$1 LOOP
+    EXECUTE format($$
+        INSERT INTO table_%1$s (table_%2$s_id)
+        SELECT
+            id
+        FROM
+            table_%2$s
+        ORDER BY
+            random();
+    $$, i, i-1);
+END LOOP;
+END;
+$function_text$ LANGUAGE plpgsql;
+
+
+SELECT populate_tables(:table_num, :num_rows);
