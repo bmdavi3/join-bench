@@ -59,6 +59,9 @@ FOR i IN 2..$1 LOOP
             table_%2$s
         ORDER BY
             random();
+
+        CREATE INDEX ON table_%1$s (table_%2$s_id);
+        ANALYZE table_%1$s;
     $$, i, i-1);
 END LOOP;
 END;
