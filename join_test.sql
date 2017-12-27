@@ -1,9 +1,9 @@
-\set table_num 12
+\set num_tables 12
 \set num_rows 1000
 
 
 DROP FUNCTION IF EXISTS create_tables;
-CREATE FUNCTION create_tables(integer, integer) RETURNS void AS $function_text$
+CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS void AS $function_text$
 BEGIN
 
 DROP TABLE IF EXISTS table_1 CASCADE;
@@ -15,10 +15,10 @@ INSERT INTO table_1 (id)
 SELECT
     nextval('table_1_id_seq')
 FROM
-    generate_series(1, $2);
+    generate_series(1, num_rows);
 
 
-FOR i IN 2..$1 LOOP
+FOR i IN 2..num_tables LOOP
     EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
 
     EXECUTE format($$
@@ -43,5 +43,5 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-SELECT create_tables(:table_num, :num_rows);
+SELECT create_tables(:num_tables, :num_rows);
 
