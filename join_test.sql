@@ -3,7 +3,11 @@
 
 
 DROP FUNCTION IF EXISTS create_tables;
-CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS void AS $function_text$
+CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS text AS $function_text$
+DECLARE
+    first_part text;
+    second_part text;
+    third_part text;
 BEGIN
 
 DROP TABLE IF EXISTS table_1 CASCADE;
@@ -39,6 +43,28 @@ FOR i IN 2..num_tables LOOP
         ANALYZE table_%1$s;
     $$, i, i-1);
 END LOOP;
+
+first_part := $query$
+        SET search_path TO join_test;
+        -- EXPLAIN ANALYZE
+        SELECT
+            count(*)
+        FROM
+            table_1 AS t1 INNER JOIN$query$;
+
+second_part := '';
+
+FOR i IN 2..num_tables-1 LOOP
+    second_part := second_part || format($query$
+            table_%1$s AS t%1$s ON
+                t%2$s.id = t%1$s.table_%2$s_id INNER JOIN$query$, i, i-1);
+END LOOP;
+
+third_part := format($query$
+            table_%1$s AS t%1$s ON
+                t%2$s.id = t%1$s.table_%2$s_id$query$, num_tables, num_tables-1);
+
+RETURN first_part || second_part || third_part;
 END;
 $function_text$ LANGUAGE plpgsql;
 
