@@ -2,12 +2,10 @@
 \set num_rows 1000
 
 
+
+
 DROP FUNCTION IF EXISTS create_tables;
-CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS text AS $function_text$
-DECLARE
-    first_part text;
-    second_part text;
-    third_part text;
+CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS void AS $function_text$
 BEGIN
 
 DROP TABLE IF EXISTS table_1 CASCADE;
@@ -43,6 +41,21 @@ FOR i IN 2..num_tables LOOP
         ANALYZE table_%1$s;
     $$, i, i-1);
 END LOOP;
+END;
+$function_text$ LANGUAGE plpgsql;
+
+
+
+
+
+
+DROP FUNCTION IF EXISTS get_query;
+CREATE FUNCTION get_query(num_tables integer) RETURNS text AS $function_text$
+DECLARE
+    first_part text;
+    second_part text;
+    third_part text;
+BEGIN
 
 first_part := $query$
         SET search_path TO join_test;
@@ -69,5 +82,6 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-SELECT create_tables(:num_tables, :num_rows);
 
+SELECT create_tables(:num_tables, :num_rows);
+SELECT get_query(:num_tables);
