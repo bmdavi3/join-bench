@@ -107,14 +107,15 @@ SELECT * from table_2 limit 10;
 */
 
 DROP FUNCTION IF EXISTS get_query;
-CREATE FUNCTION get_query(num_tables integer) RETURNS text AS $function_text$
+CREATE FUNCTION get_query(num_tables integer, max_id integer) RETURNS text AS $function_text$
 DECLARE
     first_part text;
     second_part text;
     third_part text;
+    where_clause text;
 BEGIN
 
-first_part := $query$
+first_part := $query$ explain analyze
         SELECT
             count(*)
         FROM
@@ -130,9 +131,15 @@ END LOOP;
 
 third_part := format($query$
             table_%1$s AS t%1$s ON
-                t%2$s.id = t%1$s.table_%2$s_id;$query$, num_tables, num_tables-1);
+                t%2$s.id = t%1$s.table_%2$s_id$query$, num_tables, num_tables-1);
 
-RETURN first_part || second_part || third_part;
+IF max_id IS NOT NULL THEN
+where_clause := format($query$
+        WHERE
+            t1.id <= %1$s$query$, max_id);
+END IF;
+
+RETURN first_part || second_part || third_part || where_clause || ';';
 END;
 $function_text$ LANGUAGE plpgsql;
 
@@ -142,7 +149,7 @@ $function_text$ LANGUAGE plpgsql;
 */
 
 
-SELECT get_query(10);
+SELECT get_query(10, 10);
 
 /*
         SELECT
