@@ -16,10 +16,6 @@ CREATE TYPE benchmark AS (
     iterations integer
 );
 
-drop table if exists stupid;
-create table stupid (stuff text);
-insert into stupid (stuff) values ('whatever');
-
 DROP FUNCTION IF EXISTS run_benchmarks;
 CREATE FUNCTION run_benchmarks(benchmarks benchmark[]) RETURNS void AS $function_text$
 DECLARE
@@ -51,6 +47,34 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-select run_benchmarks(ARRAY[ROW(10, 10000, Null, 10)::benchmark]);
+select run_benchmarks(ARRAY[
+    ROW(10, 100, Null, 10)::benchmark,
+    ROW(10, 1000, Null, 10)::benchmark,
+    ROW(10, 10000, Null, 10)::benchmark
+]);
 
-select * from benchmark_results;
+
+WITH results AS (
+SELECT
+    *,
+    row_number() over (partition by tables, rows, max_id order by duration)
+FROM
+    benchmark_results
+)
+SELECT
+    tables,
+    rows,
+    max_id,
+    avg(duration)
+FROM
+    results
+WHERE
+    row_number > 1
+GROUP BY
+    tables,
+    rows,
+    max_id
+ORDER BY
+    tables,
+    rows,
+    max_id
