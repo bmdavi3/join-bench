@@ -47,11 +47,11 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-select run_benchmarks(ARRAY[
-    ROW(10, 100, Null, 10)::benchmark,
-    ROW(10, 1000, Null, 10)::benchmark,
-    ROW(10, 10000, Null, 10)::benchmark
-]);
+SELECT
+    run_benchmarks(array_agg(ROW(s.a, 10000, Null, 10)::benchmark))
+FROM
+    generate_series(2, 12) AS s(a);
+
 
 
 WITH results AS (
