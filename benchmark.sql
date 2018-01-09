@@ -46,12 +46,16 @@ END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
 
+-- Needs server restart
+-- set max_locks_per_transaction = 64000;
+
+-- TODO: Improve benchmark logic to first generate max number of tables, and then generate 2-that many join queries, 10x each.
+-- TODO: Take results and generate plots in "plotly"
 
 SELECT
     run_benchmarks(array_agg(ROW(s.a, 10000, Null, 10)::benchmark))
 FROM
-    generate_series(2, 12) AS s(a);
-
+    generate_series(2, 50) AS s(a);
 
 
 WITH results AS (
