@@ -52,6 +52,7 @@ $function_text$ LANGUAGE plpgsql;
 -- set max_locks_per_transaction = 64000;
 
 -- TODO: Take results and generate plots in "plotly"
+--   - https://plot.ly/python/line-charts/
 -- TODO: Run benchmarks in RDS
 
 \set max_tables 50
