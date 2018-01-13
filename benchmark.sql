@@ -17,7 +17,7 @@ CREATE TYPE benchmark AS (
 );
 
 DROP FUNCTION IF EXISTS run_benchmarks;
-CREATE FUNCTION run_benchmarks(benchmarks benchmark[]) RETURNS void AS $function_text$
+CREATE FUNCTION run_benchmarks(benchmarks benchmark[], create_tables boolean) RETURNS void AS $function_text$
 DECLARE
     benchmark benchmark;
     begin_time timestamptz;
@@ -26,7 +26,9 @@ BEGIN
 
 
 FOREACH benchmark IN ARRAY benchmarks LOOP
-    PERFORM create_tables(benchmark.tables, benchmark.rows);
+    IF create_tables THEN
+        PERFORM create_tables(benchmark.tables, benchmark.rows);
+    END IF;
 
     SELECT get_query(benchmark.tables, benchmark.max_id) INTO query_text;
     RAISE NOTICE '%', query_text;
@@ -52,12 +54,20 @@ $function_text$ LANGUAGE plpgsql;
 -- TODO: Improve benchmark logic to first generate max number of tables, and then generate 2-that many join queries, 10x each.
 -- TODO: Take results and generate plots in "plotly"
 
+\set max_tables 50
+\set rows 10000
+
+SELECT create_tables(:'max_tables', :'rows');
 SELECT
-    run_benchmarks(array_agg(ROW(s.a, 10000, Null, 10)::benchmark))
+    run_benchmarks(array_agg(ROW(s.a, :'rows', Null, 10)::benchmark), False)
 FROM
-    generate_series(2, 50) AS s(a);
+    generate_series(2, :'max_tables') AS s(a);
 
 
+
+
+
+-- Display results
 WITH results AS (
 SELECT
     *,
