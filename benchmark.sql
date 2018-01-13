@@ -51,8 +51,8 @@ $function_text$ LANGUAGE plpgsql;
 -- Needs server restart
 -- set max_locks_per_transaction = 64000;
 
--- TODO: Improve benchmark logic to first generate max number of tables, and then generate 2-that many join queries, 10x each.
 -- TODO: Take results and generate plots in "plotly"
+-- TODO: Run benchmarks in RDS
 
 \set max_tables 50
 \set rows 10000
