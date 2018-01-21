@@ -1,4 +1,4 @@
-DROP FUNCTION IF EXISTS create_tables;
+DROP FUNCTION IF EXISTS create_tables(integer, integer);
 CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS void AS $function_text$
 BEGIN
 
@@ -38,7 +38,7 @@ END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS get_query;
+DROP FUNCTION IF EXISTS get_query(integer, integer);
 CREATE FUNCTION get_query(num_tables integer, max_id integer) RETURNS text AS $function_text$
 DECLARE
     first_part text;

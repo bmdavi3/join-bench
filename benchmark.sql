@@ -16,7 +16,7 @@ CREATE TYPE benchmark AS (
     iterations integer
 );
 
-DROP FUNCTION IF EXISTS run_benchmarks;
+DROP FUNCTION IF EXISTS run_benchmarks(benchmark[], boolean);
 CREATE FUNCTION run_benchmarks(benchmarks benchmark[], create_tables boolean) RETURNS void AS $function_text$
 DECLARE
     benchmark benchmark;
@@ -55,8 +55,8 @@ $function_text$ LANGUAGE plpgsql;
 --   - https://plot.ly/python/line-charts/
 -- TODO: Run benchmarks in RDS
 
-\set max_tables 50
-\set rows 10000
+\set max_tables 20
+\set rows 100000
 
 SELECT create_tables(:'max_tables', :'rows');
 SELECT
@@ -92,4 +92,11 @@ GROUP BY
 ORDER BY
     tables,
     rows,
-    max_id
+    max_id;
+
+
+-- Doesn't work
+-- \set filename /home/brian/angryjoin/benchmark_results/max_tables_:max_tables _rows_:rows .csv
+
+-- Dump results
+\copy benchmark_results TO /home/brian/angryjoin/benchmark_results/db.m4.large_max_tables_20_rows_100000.csv DELIMITER ',' CSV HEADER;
