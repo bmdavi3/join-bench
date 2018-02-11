@@ -32,11 +32,21 @@ FOR i IN 2..num_tables LOOP
             random();
 
         CREATE INDEX ON table_%1$s (table_%2$s_id);
-        ANALYZE table_%1$s;
     $$, i, i-1);
 END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS analyze_tables(integer);
+CREATE FUNCTION analyze_tables(num_tables integer) RETURNS void AS $function_text$
+BEGIN
+
+FOR i IN 1..num_tables LOOP
+    EXECUTE 'ANALYZE table_' || i || ';';
+END LOOP;
+END;
+$function_text$ LANGUAGE plpgsql;
+
 
 DROP FUNCTION IF EXISTS get_query(integer, integer);
 CREATE FUNCTION get_query(num_tables integer, max_id integer) RETURNS text AS $function_text$

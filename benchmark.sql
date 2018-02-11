@@ -55,17 +55,15 @@ $function_text$ LANGUAGE plpgsql;
 --   - https://plot.ly/python/line-charts/
 -- TODO: Run benchmarks in RDS
 
-\set max_tables 20
-\set rows 100000
-
 SELECT create_tables(:'max_tables', :'rows');
+SELECT analyze_tables(:'max_tables');
+
+
+
 SELECT
-    run_benchmarks(array_agg(ROW(s.a, :'rows', Null, 10)::benchmark), False)
+    run_benchmarks(array_agg(ROW(s.a, :'rows', :max_id, 10)::benchmark), False)
 FROM
     generate_series(2, :'max_tables') AS s(a);
-
-
-
 
 
 -- Display results
@@ -93,10 +91,3 @@ ORDER BY
     tables,
     rows,
     max_id;
-
-
--- Doesn't work
--- \set filename /home/brian/angryjoin/benchmark_results/max_tables_:max_tables _rows_:rows .csv
-
--- Dump results
-\copy benchmark_results TO /home/brian/angryjoin/benchmark_results/db.m4.large_max_tables_20_rows_100000.csv DELIMITER ',' CSV HEADER;
