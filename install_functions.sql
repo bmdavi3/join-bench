@@ -1,5 +1,5 @@
-DROP FUNCTION IF EXISTS create_tables(integer, integer);
-CREATE FUNCTION create_tables(num_tables integer, num_rows integer) RETURNS void AS $function_text$
+DROP FUNCTION IF EXISTS create_tables(integer, integer, boolean);
+CREATE FUNCTION create_tables(num_tables integer, num_rows integer, create_indexes boolean) RETURNS void AS $function_text$
 BEGIN
 
 DROP TABLE IF EXISTS table_1 CASCADE;
@@ -30,9 +30,11 @@ FOR i IN 2..num_tables LOOP
             table_%2$s
         ORDER BY
             random();
-
-        CREATE INDEX ON table_%1$s (table_%2$s_id);
     $$, i, i-1);
+
+    IF create_indexes THEN
+        EXECUTE 'CREATE INDEX ON table_' || i || ' (table_' || i - 1 || '_id);';
+    END IF;
 END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
@@ -73,16 +75,10 @@ END LOOP;
 
 third_part := format($query$
             table_%1$s AS t%1$s ON
-                t%2$s.id = t%1$s.table_%2$s_id$query$, num_tables, num_tables-1);
-
-IF max_id IS NOT NULL THEN
-    where_clause := format($query$
+                t%2$s.id = t%1$s.table_%2$s_id
         WHERE
-            t1.id <= %1$s$query$, max_id);
-ELSE
-    where_clause := '';
-END IF;
+            t1.id <= %3$s$query$, num_tables, num_tables-1, max_id);
 
-RETURN first_part || second_part || third_part || where_clause || ';';
+RETURN first_part || second_part || third_part || ';';
 END;
 $function_text$ LANGUAGE plpgsql;

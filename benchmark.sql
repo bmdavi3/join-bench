@@ -4,7 +4,8 @@ DROP TABLE IF EXISTS benchmark_results;
 CREATE TABLE benchmark_results (
     tables integer NOT NULL,
     rows integer NOT NULL,
-    max_id integer,
+    max_id integer NOT NULL,
+    create_indexes boolean,
     duration interval NOT NULL
 );
 
@@ -13,6 +14,7 @@ CREATE TYPE benchmark AS (
     tables integer,
     rows integer,
     max_id integer,
+    create_indexes boolean,
     iterations integer
 );
 
@@ -27,7 +29,7 @@ BEGIN
 
 FOREACH benchmark IN ARRAY benchmarks LOOP
     IF create_tables THEN
-        PERFORM create_tables(benchmark.tables, benchmark.rows);
+        PERFORM create_tables(benchmark.tables, benchmark.rows, benchmark.create_indexes);
     END IF;
 
     SELECT get_query(benchmark.tables, benchmark.max_id) INTO query_text;
@@ -37,11 +39,12 @@ FOREACH benchmark IN ARRAY benchmarks LOOP
         begin_time := clock_timestamp();
         EXECUTE query_text;
 
-        INSERT INTO benchmark_results (tables, rows, max_id, duration)
+        INSERT INTO benchmark_results (tables, rows, max_id, create_indexes, duration)
         SELECT
             benchmark.tables,
             benchmark.rows,
-            benchmark.max_id,
+	    benchmark.max_id,
+            benchmark.create_indexes,
             clock_timestamp() - begin_time;
     END LOOP;
 END LOOP;
@@ -55,13 +58,13 @@ $function_text$ LANGUAGE plpgsql;
 --   - https://plot.ly/python/line-charts/
 -- TODO: Run benchmarks in RDS
 
-SELECT create_tables(:'max_tables', :'rows');
+SELECT create_tables(:'max_tables', :'rows', :'create_indexes');
 SELECT analyze_tables(:'max_tables');
 
 
 
 SELECT
-    run_benchmarks(array_agg(ROW(s.a, :'rows', :max_id, 10)::benchmark), False)
+    run_benchmarks(array_agg(ROW(s.a, :'rows', :'max_id', :'create_indexes', 10)::benchmark), False)
 FROM
     generate_series(2, :'max_tables') AS s(a);
 
