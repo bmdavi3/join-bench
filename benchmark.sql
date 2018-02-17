@@ -69,28 +69,28 @@ FROM
     generate_series(2, :'max_tables') AS s(a);
 
 
--- Display results
-WITH results AS (
-SELECT
-    *,
-    row_number() over (partition by tables, rows, max_id order by duration)
-FROM
-    benchmark_results
-)
-SELECT
-    tables,
-    rows,
-    max_id,
-    avg(duration)
-FROM
-    results
-WHERE
-    row_number > 1
-GROUP BY
-    tables,
-    rows,
-    max_id
-ORDER BY
-    tables,
-    rows,
-    max_id;
+-- -- Display results
+-- WITH results AS (
+-- SELECT
+--     *,
+--     row_number() over (partition by tables, rows, max_id order by duration)
+-- FROM
+--     benchmark_results
+-- )
+-- SELECT
+--     tables,
+--     rows,
+--     max_id,
+--     avg(duration)
+-- FROM
+--     results
+-- WHERE
+--     row_number > 1
+-- GROUP BY
+--     tables,
+--     rows,
+--     max_id
+-- ORDER BY
+--     tables,
+--     rows,
+--     max_id;
