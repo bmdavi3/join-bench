@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS benchmark_results;
 CREATE TABLE benchmark_results (
     tables integer NOT NULL,
     rows integer NOT NULL,
+    extra_columns integer NOT NULL,
     max_id integer NOT NULL,
     create_indexes boolean,
     duration interval NOT NULL
@@ -13,6 +14,7 @@ DROP TYPE IF EXISTS benchmark CASCADE;
 CREATE TYPE benchmark AS (
     tables integer,
     rows integer,
+    extra_columns integer,
     max_id integer,
     create_indexes boolean,
     iterations integer
@@ -39,10 +41,11 @@ FOREACH benchmark IN ARRAY benchmarks LOOP
         begin_time := clock_timestamp();
         EXECUTE query_text;
 
-        INSERT INTO benchmark_results (tables, rows, max_id, create_indexes, duration)
+        INSERT INTO benchmark_results (tables, rows, extra_columns, max_id, create_indexes, duration)
         SELECT
             benchmark.tables,
             benchmark.rows,
+	    benchmark.extra_columns,
 	    benchmark.max_id,
             benchmark.create_indexes,
             clock_timestamp() - begin_time;
@@ -51,20 +54,14 @@ END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
 
--- Needs server restart
--- set max_locks_per_transaction = 64000;
 
--- TODO: Take results and generate plots in "plotly"
---   - https://plot.ly/python/line-charts/
--- TODO: Run benchmarks in RDS
-
-SELECT create_tables(:'max_tables', :'rows', :'create_indexes');
+SELECT create_tables(:'max_tables', :'rows', :'extra_columns', :'create_indexes');
 SELECT analyze_tables(:'max_tables');
 
 
 
 SELECT
-    run_benchmarks(array_agg(ROW(s.a, :'rows', :'max_id', :'create_indexes', 10)::benchmark), False)
+    run_benchmarks(array_agg(ROW(s.a, :'rows', :'extra_columns', :'max_id', :'create_indexes', 10)::benchmark), False)
 FROM
     generate_series(2, :'max_tables') AS s(a);
 

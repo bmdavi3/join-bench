@@ -38,8 +38,9 @@ def run_benchmarks(benchmarks):
         rows = "rows={}".format(benchmark['rows'])
         max_id = "max_id={}".format(benchmark['max_id'])
         create_indexes = "create_indexes={}".format(benchmark['create_indexes'])
+        extra_columns = "extra_columns={}".format(1)
 
-        subprocess.call(["psql", "-v", max_tables, "-v", rows, "-v", max_id, "-v", create_indexes, "-f", "benchmark.sql"])
+        subprocess.call(["psql", "-v", max_tables, "-v", rows, "-v", max_id, "-v", create_indexes, "-v", extra_columns, "-f", "benchmark.sql"])
 
         command = "\copy benchmark_results TO benchmark_results/db.m4.large_max_tables_{}_rows_{}_max_id_{}_create_indexes_{}.csv DELIMITER ',' CSV HEADER;".format(benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['create_indexes'])
         subprocess.call(["psql", "-c", command])

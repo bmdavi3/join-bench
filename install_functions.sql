@@ -1,11 +1,32 @@
-DROP FUNCTION IF EXISTS create_tables(integer, integer, boolean);
-CREATE FUNCTION create_tables(num_tables integer, num_rows integer, create_indexes boolean) RETURNS void AS $function_text$
+DROP FUNCTION IF EXISTS create_tables(integer, integer, integer, boolean);
+CREATE FUNCTION create_tables(num_tables integer, num_rows integer, extra_columns integer, create_indexes boolean) RETURNS void AS $function_text$
+DECLARE
+    extra_column_text text;
 BEGIN
 
+extra_column_text := '';
+
+IF extra_columns > 0 THEN
+    extra_column_text := ', ';
+END IF;
+
+
+FOR i IN 1..extra_columns LOOP
+    extra_column_text := extra_column_text || 'extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
+    IF i != extra_columns THEN
+        extra_column_text := extra_column_text || ', ';
+    END IF;
+END LOOP;
+
+
 DROP TABLE IF EXISTS table_1 CASCADE;
-CREATE TABLE table_1 (
-    id serial primary key
-);
+EXECUTE format($$
+    CREATE TABLE table_1 (
+        id serial primary key
+        %1$s
+    );
+$$, extra_column_text);
+
 
 INSERT INTO table_1 (id)
 SELECT
@@ -14,12 +35,16 @@ FROM
     generate_series(1, num_rows);
 
 
+
 FOR i IN 2..num_tables LOOP
     EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
 
+    RAISE NOTICE 'Creating and inserting into table...';
+
     EXECUTE format($$
         CREATE TABLE table_%1$s (
-            id serial primary key,
+            id serial primary key
+            %3$s ,
             table_%2$s_id integer references table_%2$s (id)
 	);
 
@@ -30,11 +55,13 @@ FOR i IN 2..num_tables LOOP
             table_%2$s
         ORDER BY
             random();
-    $$, i, i-1);
+    $$, i, i-1, extra_column_text);
 
     IF create_indexes THEN
+        RAISE NOTICE 'Creating index...';
         EXECUTE 'CREATE INDEX ON table_' || i || ' (table_' || i - 1 || '_id);';
     END IF;
+    RAISE NOTICE 'Done creating table and index if necessary';
 END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
