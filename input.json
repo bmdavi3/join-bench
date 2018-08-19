@@ -5,7 +5,8 @@
         "max-id": 10,
         "extra-columns": 0,
         "create-indexes": false,
-        "output-filename": "benchmark_1.csv"
+        "output-filename": "benchmark_1",
+        "plot-title": "My Plot Title 1"
     },
     {
         "max-tables": 50,
@@ -13,7 +14,8 @@
         "max-id": 10,
         "extra-columns": 0,
         "create-indexes": true,
-        "output-filename": "benchmark_2.csv"
+        "output-filename": "benchmark_2",
+        "plot-title": "My Plot Title 2"
     },
     {
         "max-tables": 200,
@@ -21,7 +23,8 @@
         "max-id": 10,
         "extra-columns": 0,
         "create-indexes": false,
-        "output-filename": "benchmark_3.csv"
+        "output-filename": "benchmark_3",
+        "plot-title": "My Plot Title 3"
     },
     {
         "max-tables": 200,
@@ -29,6 +32,7 @@
         "max-id": 10,
         "extra-columns": 0,
         "create-indexes": true,
-        "output-filename": "benchmark_4.csv"
+        "output-filename": "benchmark_4",
+        "plot-title": "My Plot Title 4"
     }
 ]
