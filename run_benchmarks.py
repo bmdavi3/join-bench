@@ -28,11 +28,11 @@ def main():
         benchmark_descriptions = json.load(f)
 
     for bd in benchmark_descriptions:
-        benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['create-indexes'])
+        benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'])
         run_benchmarks(benchmarks)
 
 
-def create_benchmarks(max_tables, max_rows, max_id, create_indexes):
+def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes):
     benchmarks = []
     rows = 10
     while rows <= max_rows:
@@ -40,6 +40,7 @@ def create_benchmarks(max_tables, max_rows, max_id, create_indexes):
             'max_tables': max_tables,
             'rows': rows,
             'max_id': max_id,
+            'extra_columns': extra_columns,
             'create_indexes': create_indexes
         })
 
@@ -54,7 +55,7 @@ def run_benchmarks(benchmarks):
         rows = "rows={}".format(benchmark['rows'])
         max_id = "max_id={}".format(benchmark['max_id'])
         create_indexes = "create_indexes={}".format(benchmark['create_indexes'])
-        extra_columns = "extra_columns={}".format(1)
+        extra_columns = "extra_columns={}".format(benchmark['extra_columns'])
 
         subprocess.call(["psql", "-v", max_tables, "-v", rows, "-v", max_id, "-v", create_indexes, "-v", extra_columns, "-f", "benchmark.sql"])
 
