@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 
 from jinja2 import Template
 import plotly.graph_objs as go
@@ -25,7 +26,7 @@ def render_html(figure, filename):
             outfile.write(template.render(figure=figure))
 
 
-def generate_plotly(cursor, title, filename):
+def generate_plotly(cursor, title, filename, output_dir):
     cursor.execute("""
         WITH foo AS (
             SELECT
@@ -63,12 +64,15 @@ def generate_plotly(cursor, title, filename):
     layout = go.Layout(title=title, xaxis=dict(title='Tables'), yaxis=dict(title='Seconds', type='log', autorange=True))
     figure = go.Figure(data=data, layout=layout)
 
-    render_html(json.dumps(figure.to_plotly_json()), filename)
+    full_filename = os.path.join(output_dir, filename)
+
+    render_html(json.dumps(figure.to_plotly_json()), full_filename)
 
 
 def main():
     parser = argparse.ArgumentParser(description='Run a benchmark')
     parser.add_argument('filename', help='json input file')
+    parser.add_argument('--output-dir', default='results', help='Directory to output results')
 
     args = parser.parse_args()
 
@@ -84,8 +88,8 @@ def main():
     for bd in benchmark_descriptions:
         truncate_benchmark_results(cursor)
         benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'], bd['output-filename'])
-        run_benchmarks(cursor, benchmarks)
-        generate_plotly(cursor, bd['plot-title'], bd['output-filename'])
+        run_benchmarks(cursor, benchmarks, args.output_dir)
+        generate_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
 
 
 def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes, output_filename):
@@ -136,11 +140,13 @@ def execute_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_in
     })
 
 
-def run_benchmarks(cursor, benchmarks):
+def run_benchmarks(cursor, benchmarks, output_dir):
     for benchmark in benchmarks:
         execute_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
 
-        with open('/output/{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']), 'w') as outfile:
+        filename = os.path.join(output_dir, '{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']))
+
+        with open(filename, 'w') as outfile:
             outfile.write("tables,rows,extra_columns,max_id,create_indexes,duration\n")
             cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
 

@@ -10,8 +10,38 @@ Edit run_several_benchmarks.sh to set PGHOST, PGDATABASE, PGUSER variables and l
 
 .. code::
 
-   PGHOST="localhost" PGDATABASE="join_test" PGUSER="brian" PGPASSWORD="pass" make run
+    PGHOST="localhost" PGDATABASE="join_test" PGUSER="brian" PGPASSWORD="pass" python run_benchmarks.py input.json
 
+
+Input
+~~~~~
+
+Angryjoin takes a json file that describes the benchmarks to run.
+
+.. code::
+
+    $ cat input.json
+    [
+        {
+            "max-tables": 20,
+            "max-rows": 1000,
+            "max-id": 10,
+            "extra-columns": 0,
+            "create-indexes": false,
+            "output-filename": "benchmark_1",
+            "plot-title": "My Plot Title 1"
+        },
+        {
+            "max-tables": 30,
+            "max-rows": 10000,
+            "max-id": 10,
+            "extra-columns": 5,
+            "create-indexes": true,
+            "output-filename": "benchmark_2,
+            "plot-title": "My Plot Title 2"
+        },
+        ...
+    ]
 
 
 Output
