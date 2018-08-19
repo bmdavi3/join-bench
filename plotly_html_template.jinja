@@ -1,0 +1,12 @@
+<head>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+  <div id="myDiv"></div>
+  <script>
+    var figure = {{ figure }};
+
+    Plotly.plot('myDiv', figure.data, figure.layout);
+  </script>
+</body>
