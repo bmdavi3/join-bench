@@ -21,7 +21,7 @@ def truncate_benchmark_results(cursor):
 def render_html(figure, filename):
     with open('plotly_html_template.jinja', 'r') as template_file:
         template = Template(template_file.read())
-        with open(filename, 'w') as outfile:
+        with open('{}.html'.format(filename), 'w') as outfile:
             outfile.write(template.render(figure=figure))
 
 
@@ -85,7 +85,7 @@ def main():
         truncate_benchmark_results(cursor)
         benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'], bd['output-filename'])
         run_benchmarks(benchmarks)
-        generate_plotly(cursor, bd['plot-title'], bd['plot-filename'])
+        generate_plotly(cursor, bd['plot-title'], bd['output-filename'])
 
 
 def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes, output_filename):
@@ -116,7 +116,7 @@ def run_benchmarks(benchmarks):
 
         subprocess.call(["psql", "-v", max_tables, "-v", rows, "-v", max_id, "-v", create_indexes, "-v", extra_columns, "-f", "benchmark.sql"])
 
-        command = "\copy benchmark_results TO benchmark_results/{} DELIMITER ',' CSV HEADER;".format(benchmark['output_filename'])
+        command = "\copy (SELECT * FROM benchmark_results WHERE rows = {}) TO benchmark_results/{}_{}_rows.csv DELIMITER ',' CSV HEADER;".format(benchmark['rows'], benchmark['output_filename'], benchmark['rows'])
         subprocess.call(["psql", "-c", command])
 
 
