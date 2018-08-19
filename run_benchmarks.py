@@ -84,7 +84,7 @@ def main():
     for bd in benchmark_descriptions:
         truncate_benchmark_results(cursor)
         benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'], bd['output-filename'])
-        run_benchmarks(benchmarks)
+        run_benchmarks(cursor, benchmarks)
         generate_plotly(cursor, bd['plot-title'], bd['output-filename'])
 
 
@@ -106,15 +106,39 @@ def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexe
     return benchmarks
 
 
-def run_benchmarks(benchmarks):
-    for benchmark in benchmarks:
-        max_tables = "max_tables={}".format(benchmark['max_tables'])
-        rows = "rows={}".format(benchmark['rows'])
-        max_id = "max_id={}".format(benchmark['max_id'])
-        create_indexes = "create_indexes={}".format(benchmark['create_indexes'])
-        extra_columns = "extra_columns={}".format(benchmark['extra_columns'])
+def execute_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_indexes):
+    cursor.execute("""
+        SELECT create_tables(%(max_tables)s, %(rows)s, %(extra_columns)s, %(create_indexes)s);
+    """, {
+        'max_tables': max_tables,
+        'rows': rows,
+        'extra_columns': extra_columns,
+        'create_indexes': create_indexes,
+    })
 
-        subprocess.call(["psql", "-v", max_tables, "-v", rows, "-v", max_id, "-v", create_indexes, "-v", extra_columns, "-f", "benchmark.sql"])
+    cursor.execute("""
+        SELECT analyze_tables(%(max_tables)s);
+    """, {
+        'max_tables': max_tables,
+    })
+
+    cursor.execute("""
+        SELECT
+            run_benchmarks(array_agg(ROW(s.a, %(rows)s, %(extra_columns)s, %(max_id)s, %(create_indexes)s, 10)::benchmark), False)
+        FROM
+            generate_series(2, %(max_tables)s) AS s(a);
+    """, {
+        'max_tables': max_tables,
+        'rows': rows,
+        'extra_columns': extra_columns,
+        'create_indexes': create_indexes,
+        'max_id': max_id,
+    })
+
+
+def run_benchmarks(cursor, benchmarks):
+    for benchmark in benchmarks:
+        execute_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
 
         command = "\copy (SELECT * FROM benchmark_results WHERE rows = {}) TO benchmark_results/{}_{}_rows.csv DELIMITER ',' CSV HEADER;".format(benchmark['rows'], benchmark['output_filename'], benchmark['rows'])
         subprocess.call(["psql", "-c", command])
