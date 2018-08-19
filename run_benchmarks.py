@@ -140,8 +140,9 @@ def run_benchmarks(cursor, benchmarks):
     for benchmark in benchmarks:
         execute_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
 
-        command = "\copy (SELECT * FROM benchmark_results WHERE rows = {}) TO benchmark_results/{}_{}_rows.csv DELIMITER ',' CSV HEADER;".format(benchmark['rows'], benchmark['output_filename'], benchmark['rows'])
-        subprocess.call(["psql", "-c", command])
+        with open('benchmark_results/{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']), 'w') as outfile:
+            outfile.write("tables,rows,extra_columns,max_id,create_indexes,duration\n")
+            cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
 
 
 if __name__ == "__main__":
