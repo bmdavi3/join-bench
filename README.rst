@@ -10,7 +10,6 @@ Edit run_several_benchmarks.sh to set PGHOST, PGDATABASE, PGUSER variables and l
 
 .. code::
 
-   make build
    PGHOST="localhost" PGDATABASE="join_test" PGUSER="brian" PGPASSWORD="pass" make run
 
 
