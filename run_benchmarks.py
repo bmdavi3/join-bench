@@ -140,7 +140,7 @@ def run_benchmarks(cursor, benchmarks):
     for benchmark in benchmarks:
         execute_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
 
-        with open('benchmark_results/{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']), 'w') as outfile:
+        with open('/output/{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']), 'w') as outfile:
             outfile.write("tables,rows,extra_columns,max_id,create_indexes,duration\n")
             cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
 
