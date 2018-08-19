@@ -28,11 +28,11 @@ def main():
         benchmark_descriptions = json.load(f)
 
     for bd in benchmark_descriptions:
-        benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'])
+        benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'], bd['output-filename'])
         run_benchmarks(benchmarks)
 
 
-def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes):
+def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes, output_filename):
     benchmarks = []
     rows = 10
     while rows <= max_rows:
@@ -41,7 +41,8 @@ def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexe
             'rows': rows,
             'max_id': max_id,
             'extra_columns': extra_columns,
-            'create_indexes': create_indexes
+            'create_indexes': create_indexes,
+            'output_filename': output_filename,
         })
 
         rows = rows * 10
@@ -59,7 +60,7 @@ def run_benchmarks(benchmarks):
 
         subprocess.call(["psql", "-v", max_tables, "-v", rows, "-v", max_id, "-v", create_indexes, "-v", extra_columns, "-f", "benchmark.sql"])
 
-        command = "\copy benchmark_results TO benchmark_results/db.m4.large_max_tables_{}_rows_{}_max_id_{}_create_indexes_{}.csv DELIMITER ',' CSV HEADER;".format(benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['create_indexes'])
+        command = "\copy benchmark_results TO benchmark_results/{} DELIMITER ',' CSV HEADER;".format(benchmark['output_filename'])
         subprocess.call(["psql", "-c", command])
 
 
