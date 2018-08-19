@@ -1,6 +1,5 @@
 import argparse
 import json
-import subprocess
 
 from jinja2 import Template
 import plotly.graph_objs as go
@@ -8,8 +7,9 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 
-def install_benchmark_database_objects():
-    subprocess.call(["psql", "-f", "install_benchmark_database_objects.sql"])
+def install_benchmark_database_objects(cursor):
+    with open('install_benchmark_database_objects.sql') as objects_file:
+        cursor.execute(objects_file.read())
 
 
 def truncate_benchmark_results(cursor):
@@ -75,11 +75,11 @@ def main():
     with open(args.filename) as f:
         benchmark_descriptions = json.load(f)
 
-    install_benchmark_database_objects()
-
     connection = psycopg2.connect("", cursor_factory=DictCursor)
     connection.autocommit = True
     cursor = connection.cursor()
+
+    install_benchmark_database_objects(cursor)
 
     for bd in benchmark_descriptions:
         truncate_benchmark_results(cursor)
