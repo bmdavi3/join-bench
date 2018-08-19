@@ -1,0 +1,34 @@
+[
+    {
+        "max-tables": 50,
+        "max-rows": 100000,
+        "max-id": 10,
+        "extra-columns": 0,
+        "create-indexes": false,
+        "output-filename": "benchmark_1.csv"
+    },
+    {
+        "max-tables": 50,
+        "max-rows": 100000,
+        "max-id": 10,
+        "extra-columns": 0,
+        "create-indexes": true,
+        "output-filename": "benchmark_2.csv"
+    },
+    {
+        "max-tables": 200,
+        "max-rows": 1000,
+        "max-id": 10,
+        "extra-columns": 0,
+        "create-indexes": false,
+        "output-filename": "benchmark_3.csv"
+    },
+    {
+        "max-tables": 200,
+        "max-rows": 100000,
+        "max-id": 10,
+        "extra-columns": 0,
+        "create-indexes": true,
+        "output-filename": "benchmark_4.csv"
+    }
+]

@@ -1,33 +1,49 @@
 import argparse
+import json
 import subprocess
+
+
+"""
+How are we going to describe benchmarks?
+
+What can we specify?
+
+  - max-tables
+  - max-rows
+  - max-id
+  - whether we have indexes
+  - how many extra columns
+  - how many times to do each query
+  - output file for results
+"""
 
 
 def main():
     parser = argparse.ArgumentParser(description='Run a benchmark')
-    parser.add_argument('--max-tables', type=int, required=True)
-    parser.add_argument('--max-max-rows', type=int, required=True)
-    parser.add_argument('--max-id', type=int, required=True)
-    parser.add_argument('--create-indexes', type=bool, required=True)
+    parser.add_argument('filename', help='json input file')
 
     args = parser.parse_args()
 
-    benchmarks = create_benchmarks(args.max_tables, args.max_max_rows, args.max_id, args.create_indexes)
-    run_benchmarks(benchmarks)
+    with open(args.filename) as f:
+        benchmark_descriptions = json.load(f)
+
+    for bd in benchmark_descriptions:
+        benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['create-indexes'])
+        run_benchmarks(benchmarks)
 
 
-def create_benchmarks(max_tables, max_max_rows, max_id, create_indexes):
+def create_benchmarks(max_tables, max_rows, max_id, create_indexes):
     benchmarks = []
-    max_rows = 10
-
-    while max_rows <= max_max_rows:
+    rows = 10
+    while rows <= max_rows:
         benchmarks.append({
             'max_tables': max_tables,
-            'rows': max_rows,
+            'rows': rows,
             'max_id': max_id,
             'create_indexes': create_indexes
         })
 
-        max_rows = max_rows * 10
+        rows = rows * 10
 
     return benchmarks
 
