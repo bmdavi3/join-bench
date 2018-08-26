@@ -1,8 +1,11 @@
 FROM python:3
 
-COPY requirements.txt ./
+RUN mkdir /app
+
+WORKDIR /app
+
+ADD requirements.txt plotly_html_template.jinja install_benchmark_database_objects.sql run_benchmarks.py ./
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY plotly_html_template.jinja install_benchmark_database_objects.sql run_benchmarks.py ./
-
-CMD [ "python", "./run_benchmarks.py", "/input/input.json", "--output-dir", "/output" ]
+ENTRYPOINT [ "python", "run_benchmarks.py" ]

@@ -3,14 +3,21 @@ Benchmark Runner
 
 Test the performance of joining a bunch of tables
 
-Usage
+Build
 ~~~~~
-
-Edit run_several_benchmarks.sh to set PGHOST, PGDATABASE, PGUSER variables and list out the benchmarks to run, and then
 
 .. code::
 
-    PGHOST="localhost" PGDATABASE="join_test" PGUSER="brian" PGPASSWORD="pass" python run_benchmarks.py input.json
+    make build
+
+Run
+~~~
+
+The database to target is specified by the standard postgres environment variables.  You'll also need to either set PGPASSWORD or configure a .pgpass file
+
+.. code::
+
+    PGHOST="localhost" PGDATABASE="join_test" PGUSER="brian" PGPASSWORD="pass" ./run_with_docker.sh input.json
 
 
 Input
@@ -47,4 +54,4 @@ Angryjoin takes a json file that describes the benchmarks to run.
 Output
 ~~~~~~
 
-Benchmark results are stored as CSV files in the benchmark_results directory
+Benchmark plots and CSV files are stored in the results/ directory by default
