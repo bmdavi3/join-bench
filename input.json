@@ -1,5 +1,17 @@
 [
     {
+        "graph-notes": "Left to right, the number of tables being joined is increasing, from 2 to max-tables.  We'll benchmark this setup with the number of rows in the primary table starting at 10, and increasing by 10x until we reach max-rows, with a plot line on the graph for each of these",
+        "join-type": "many-columns-that-reference-other-tables",
+        "max-tables": 20,
+        "max-rows": 1000,
+        "extra-columns": 0,
+        "create-indexes": false,
+        "output-filename": "benchmark_1",
+        "plot-title": "My Plot Title 1"
+    },
+    {
+        "graph-notes": "Left to right, the number of tables being joined is increasing, from 2 to max-tables.  We'll benchmark this setup with the number of rows starting at 10, and increasing by 10x until we reach max-rows, with a plot line on the graph for each of these",
+        "join-type": "many-tables-that-all-reference-the-previous-table",
         "max-tables": 20,
         "max-rows": 1000,
         "max-id": 10,
