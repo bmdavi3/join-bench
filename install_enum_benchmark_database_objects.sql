@@ -23,7 +23,7 @@ BEGIN
 
 
     FOR i IN 1..num_lookup_tables LOOP
-        foreign_key_text := foreign_key_text || 'table_' || i || '_id references table_' || i || '(id)';
+        foreign_key_text := foreign_key_text || 'table_' || i || '_id integer references table_' || i || '(id)';
         IF i != num_lookup_tables THEN
             foreign_key_text := foreign_key_text || ', ';
         END IF;
@@ -53,15 +53,12 @@ BEGIN
 
     FOR i IN 1..num_lookup_tables LOOP
         foreign_key_insert_text := foreign_key_insert_text || format($$
-            ,(
+            , ceil((random() * (
                 SELECT
-                    id
+                    max(id)
                 FROM
                     table_%1$s
-                ORDER BY
-                    random()
-                LIMIT 1
-            )
+            )))::int
         $$, i);
     END LOOP;
 
