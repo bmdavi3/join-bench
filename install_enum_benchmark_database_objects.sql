@@ -1,3 +1,47 @@
+DROP FUNCTION IF EXISTS create_lookup_tables(integer, integer, integer);
+CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
+DECLARE
+    extra_column_text text;
+BEGIN
+
+extra_column_text := '';
+
+IF extra_columns > 0 THEN
+    extra_column_text := ', ';
+END IF;
+
+
+FOR i IN 1..extra_columns LOOP
+    extra_column_text := extra_column_text || 'extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
+    IF i != extra_columns THEN
+        extra_column_text := extra_column_text || ', ';
+    END IF;
+END LOOP;
+
+FOR i IN 1..num_tables LOOP
+    EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
+
+    RAISE NOTICE 'Creating and inserting into table...';
+
+    EXECUTE format($$
+        CREATE TABLE table_%1$s (
+            id serial primary key
+            %3$s ,
+            label text not null
+        );
+
+        INSERT INTO table_%1$s (label)
+        SELECT
+            'My Label #' || gs
+        FROM
+            generate_series(1, %2$s) AS gs;
+    $$, i, num_rows, extra_column_text);
+
+    RAISE NOTICE 'Done creating table';
+END LOOP;
+END;
+$function_text$ LANGUAGE plpgsql;
+
 DROP FUNCTION IF EXISTS create_primary_table(integer, integer, integer);
 CREATE FUNCTION create_primary_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
@@ -74,50 +118,6 @@ BEGIN
 END;
 $function_text$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS create_lookup_tables(integer, integer, integer);
-CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
-DECLARE
-    extra_column_text text;
-BEGIN
-
-extra_column_text := '';
-
-IF extra_columns > 0 THEN
-    extra_column_text := ', ';
-END IF;
-
-
-FOR i IN 1..extra_columns LOOP
-    extra_column_text := extra_column_text || 'extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
-    IF i != extra_columns THEN
-        extra_column_text := extra_column_text || ', ';
-    END IF;
-END LOOP;
-
-FOR i IN 1..num_tables LOOP
-    EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
-
-    RAISE NOTICE 'Creating and inserting into table...';
-
-    EXECUTE format($$
-        CREATE TABLE table_%1$s (
-            id serial primary key
-            %3$s ,
-            label text not null
-    	);
-
-        INSERT INTO table_%1$s (label)
-        SELECT
-            'My Label #' || gs
-        FROM
-            generate_series(1, %2$s) AS gs;
-    $$, i, num_rows, extra_column_text);
-
-    RAISE NOTICE 'Done creating table';
-END LOOP;
-END;
-$function_text$ LANGUAGE plpgsql;
-
 DROP FUNCTION IF EXISTS analyze_tables(integer);
 CREATE FUNCTION analyze_tables(num_tables integer) RETURNS void AS $function_text$
 BEGIN
@@ -136,29 +136,32 @@ DECLARE
     second_part text;
     third_part text;
     where_clause text;
+    join_list text;
+    column_select_list text;
 BEGIN
 
-first_part := $query$
-        SELECT
-            count(*)
-        FROM
-            table_1 AS t1 INNER JOIN$query$;
+column_select_list := '';
 
-second_part := '';
-
-FOR i IN 2..num_tables-1 LOOP
-    second_part := second_part || format($query$
-            table_%1$s AS t%1$s ON
-                t%2$s.id = t%1$s.table_%2$s_id INNER JOIN$query$, i, i-1);
+FOR i IN 1..num_tables LOOP
+    column_select_list := column_select_list || ', t' || i || '.label as t' || i || '_label';
 END LOOP;
 
-third_part := format($query$
-            table_%1$s AS t%1$s ON
-                t%2$s.id = t%1$s.table_%2$s_id
-        WHERE
-            t1.id <= %3$s$query$, num_tables, num_tables-1, max_id);
 
-RETURN first_part || second_part || third_part || ';';
+
+join_list := '';
+
+FOR i IN 1..num_tables LOOP
+    join_list := join_list || ' inner join table_' || i || ' as t' || i || ' on t' || i || '.id = p.table_' || i || '_id ';
+END LOOP;
+
+
+RETURN format($$
+        SELECT
+            p.id
+            %1$s
+        FROM
+            primary_table AS p %2$s $$, column_select_list, join_list);
+
 END;
 $function_text$ LANGUAGE plpgsql;
 
