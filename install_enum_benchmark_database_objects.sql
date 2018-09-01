@@ -1,10 +1,8 @@
 DROP FUNCTION IF EXISTS create_lookup_tables(integer, integer, integer);
 CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
-    extra_column_text text;
+    extra_column_text text := '';
 BEGIN
-
-extra_column_text := '';
 
 IF extra_columns > 0 THEN
     extra_column_text := ', ';
@@ -45,22 +43,18 @@ $function_text$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS create_primary_table(integer, integer, integer);
 CREATE FUNCTION create_primary_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
-    extra_column_text text;
-    foreign_key_text text;
-    foreign_key_column_text text;
-    foreign_key_insert_text text;
+    extra_column_text text := '';
+    foreign_key_text text := '';
+    foreign_key_column_text text := '';
+    foreign_key_insert_text text := '';
 BEGIN
     -- Extra column section
-    extra_column_text := '';
-
     FOR i IN 1..extra_columns LOOP
         extra_column_text := extra_column_text || ', extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
     END LOOP;
 
 
     -- Foreign key section
-    foreign_key_text := '';
-
     IF num_lookup_tables > 0 THEN
         foreign_key_text := ', ';
     END IF;
@@ -86,15 +80,11 @@ BEGIN
     $$, extra_column_text, foreign_key_text);
 
     -- Foreign key column text section
-    foreign_key_column_text := '';
-
     FOR i IN 1..num_lookup_tables LOOP
         foreign_key_column_text := foreign_key_column_text || ', table_' || i || '_id';
     END LOOP;
 
     -- Foreign key insert text section
-    foreign_key_insert_text := '';
-
     FOR i IN 1..num_lookup_tables LOOP
         foreign_key_insert_text := foreign_key_insert_text || format($$
             , ceil((random() * (
@@ -129,26 +119,18 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS get_query(integer, integer);
-CREATE FUNCTION get_query(num_tables integer, max_id integer) RETURNS text AS $function_text$
+DROP FUNCTION IF EXISTS get_query(integer, text);
+CREATE FUNCTION get_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
 DECLARE
-    first_part text;
-    second_part text;
-    third_part text;
-    where_clause text;
-    join_list text;
-    column_select_list text;
+    where_clause text := '';
+    join_list text := '';
+    column_select_list text := '';
+    column_equals_list text := '';
 BEGIN
-    column_select_list := '';
-
     FOR i IN 1..num_tables LOOP
         column_select_list := column_select_list || $$,
                 t$$ || i || '.label as t' || i || '_label';
     END LOOP;
-
-
-
-    join_list := '';
 
     FOR i IN 1..num_tables LOOP
         join_list := join_list || $$ INNER JOIN
@@ -156,15 +138,26 @@ BEGIN
                     t$$ || i || '.id = p.table_' || i || '_id';
     END LOOP;
 
+    IF label_equals IS NOT NULL THEN
+        FOR i IN 1..num_tables LOOP
+            column_equals_list := column_equals_list || $$
+                t$$ || i || $$.label = '$$ || label_equals || $$'$$;
+            IF i != num_tables THEN
+                column_equals_list := column_equals_list || ' AND ';
+            END IF;
+        END LOOP;
+
+        where_clause := $$
+            WHERE$$ || column_equals_list;
+    END IF;
 
     RETURN format($$
             SELECT
                 p.id%1$s
             FROM
-                primary_table AS p%2$s
-    $$, column_select_list, join_list);
-
-    END;
+                primary_table AS p%2$s %3$s;
+    $$, column_select_list, join_list, where_clause);
+END;
 $function_text$ LANGUAGE plpgsql;
 
 
