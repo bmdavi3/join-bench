@@ -139,30 +139,32 @@ DECLARE
     join_list text;
     column_select_list text;
 BEGIN
+    column_select_list := '';
 
-column_select_list := '';
-
-FOR i IN 1..num_tables LOOP
-    column_select_list := column_select_list || ', t' || i || '.label as t' || i || '_label';
-END LOOP;
-
-
-
-join_list := '';
-
-FOR i IN 1..num_tables LOOP
-    join_list := join_list || ' inner join table_' || i || ' as t' || i || ' on t' || i || '.id = p.table_' || i || '_id ';
-END LOOP;
+    FOR i IN 1..num_tables LOOP
+        column_select_list := column_select_list || $$,
+                t$$ || i || '.label as t' || i || '_label';
+    END LOOP;
 
 
-RETURN format($$
-        SELECT
-            p.id
-            %1$s
-        FROM
-            primary_table AS p %2$s $$, column_select_list, join_list);
 
-END;
+    join_list := '';
+
+    FOR i IN 1..num_tables LOOP
+        join_list := join_list || $$ INNER JOIN
+                table_$$ || i || ' AS t' || i || $$ ON
+                    t$$ || i || '.id = p.table_' || i || '_id';
+    END LOOP;
+
+
+    RETURN format($$
+            SELECT
+                p.id%1$s
+            FROM
+                primary_table AS p%2$s
+    $$, column_select_list, join_list);
+
+    END;
 $function_text$ LANGUAGE plpgsql;
 
 
