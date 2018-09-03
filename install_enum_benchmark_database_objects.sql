@@ -1,3 +1,19 @@
+DROP FUNCTION IF EXISTS create_enums(integer, integer);
+CREATE FUNCTION create_enums(num_tables integer, num_rows integer) RETURNS void AS $function_text$
+DECLARE
+    enum_label_text text := '';
+BEGIN
+
+SELECT string_agg($$'My Label #$$ || gs || $$'$$, ',') INTO enum_label_text FROM generate_series(1, num_rows) AS gs;
+
+FOR i IN 1..num_tables LOOP
+    EXECUTE 'DROP TYPE IF EXISTS enum_' || i || ' CASCADE;';
+    EXECUTE 'CREATE TYPE enum_' || i || ' AS ENUM (' || enum_label_text || ');';
+END LOOP;
+END;
+$function_text$ LANGUAGE plpgsql;
+
+
 DROP FUNCTION IF EXISTS create_lookup_tables(integer, integer, integer);
 CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
