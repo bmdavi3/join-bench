@@ -119,6 +119,41 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
+DROP FUNCTION IF EXISTS get_enum_query(integer, text);
+CREATE FUNCTION get_enum_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
+DECLARE
+    where_clause text := '';
+    column_select_list text := '';
+    column_equals_list text := '';
+BEGIN
+    FOR i IN 1..num_tables LOOP
+        column_select_list := column_select_list || $$,
+                label_$$ || i;
+    END LOOP;
+
+    IF label_equals IS NOT NULL THEN
+        FOR i IN 1..num_tables LOOP
+            column_equals_list := column_equals_list || $$
+                label_$$ || i || $$ = '$$ || label_equals || $$'$$;
+            IF i != num_tables THEN
+                column_equals_list := column_equals_list || ' AND ';
+            END IF;
+        END LOOP;
+
+        where_clause := $$
+            WHERE$$ || column_equals_list;
+    END IF;
+
+    RETURN format($$
+            SELECT
+                id%1$s
+            FROM
+                primary_table %2$s;
+    $$, column_select_list, where_clause);
+END;
+$function_text$ LANGUAGE plpgsql;
+
+
 DROP FUNCTION IF EXISTS get_query(integer, text);
 CREATE FUNCTION get_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
 DECLARE
