@@ -14,6 +14,41 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
+DROP FUNCTION IF EXISTS create_enum_using_table(integer, integer, integer, integer);
+CREATE FUNCTION create_enum_using_table(num_rows integer, num_enum_columns integer, num_enum_choices integer, extra_columns integer) RETURNS void AS $function_text$
+DECLARE
+    extra_column_text text := '';
+    enum_column_text text := '';
+    insert_text text;
+BEGIN
+    -- Extra column section
+    FOR i IN 1..extra_columns LOOP
+        extra_column_text := extra_column_text || ', extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
+    END LOOP;
+
+
+    SELECT string_agg(', label_' || gs || ' enum_' || gs, ' ' ORDER BY gs) INTO enum_column_text FROM generate_series(1, num_enum_columns) AS gs;
+
+    DROP TABLE IF EXISTS primary_table CASCADE;
+    EXECUTE format($$
+        CREATE TABLE primary_table (
+            id serial primary key
+            %1$s
+            %2$s
+        );
+    $$, extra_column_text, enum_column_text);
+
+    SELECT
+        'INSERT INTO primary_table (' || string_agg('label_' || gs, ', ' ORDER BY gs) || ') VALUES (' || string_agg($$ ('My Label #' || (SELECT ceil((random() * $$ || num_enum_choices || '))::int))::enum_' || gs, ', ') || ');'
+    INTO insert_text
+    FROM
+        generate_series(1, num_enum_columns) AS gs;
+
+    EXECUTE insert_text;
+END;
+$function_text$ LANGUAGE plpgsql;
+
+
 DROP FUNCTION IF EXISTS create_lookup_tables(integer, integer, integer);
 CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
