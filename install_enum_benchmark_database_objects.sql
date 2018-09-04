@@ -87,15 +87,17 @@ $function_text$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS create_primary_table(integer, integer, integer);
 CREATE FUNCTION create_primary_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
-    extra_column_text text := '';
+    extra_column_text text;
     foreign_key_text text;
     foreign_key_column_text text := '';
     foreign_key_insert_text text := '';
 BEGIN
     -- Extra column section
-    FOR i IN 1..extra_columns LOOP
-        extra_column_text := extra_column_text || ', extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
-    END LOOP;
+    SELECT
+        string_agg(', extra_column_' || gs || $$ varchar(20) default '12345678901234567890' $$, ' ')
+    INTO extra_column_text
+    FROM
+        generate_series(1, extra_columns) AS gs;
 
     -- Foreign key section
     SELECT
@@ -116,9 +118,11 @@ BEGIN
     $$, extra_column_text, foreign_key_text);
 
     -- Foreign key column text section
-    FOR i IN 1..num_lookup_tables LOOP
-        foreign_key_column_text := foreign_key_column_text || ', table_' || i || '_id';
-    END LOOP;
+    SELECT
+        string_agg(', table_' || gs || '_id', ' ')
+    INTO foreign_key_column_text
+    FROM
+        generate_series(1, num_lookup_tables) AS gs;
 
     -- Foreign key insert text section
     FOR i IN 1..num_lookup_tables LOOP
