@@ -88,7 +88,7 @@ DROP FUNCTION IF EXISTS create_primary_table(integer, integer, integer);
 CREATE FUNCTION create_primary_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
     extra_column_text text := '';
-    foreign_key_text text := '';
+    foreign_key_text text;
     foreign_key_column_text text := '';
     foreign_key_insert_text text := '';
 BEGIN
@@ -97,20 +97,12 @@ BEGIN
         extra_column_text := extra_column_text || ', extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
     END LOOP;
 
-
     -- Foreign key section
-    IF num_lookup_tables > 0 THEN
-        foreign_key_text := ', ';
-    END IF;
-
-
-    FOR i IN 1..num_lookup_tables LOOP
-        foreign_key_text := foreign_key_text || 'table_' || i || '_id integer references table_' || i || '(id)';
-        IF i != num_lookup_tables THEN
-            foreign_key_text := foreign_key_text || ', ';
-        END IF;
-    END LOOP;
-
+    SELECT
+        string_agg(', table_' || gs || '_id integer references table_' || gs || '(id)', ' ')
+    INTO foreign_key_text
+    FROM
+        generate_series(1, num_lookup_tables) AS gs;
 
     -- Create primary table
     RAISE NOTICE 'Creating primary table...';
