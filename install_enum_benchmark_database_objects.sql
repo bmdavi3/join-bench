@@ -198,34 +198,35 @@ $function_text$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS get_query(integer, text);
 CREATE FUNCTION get_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
 DECLARE
-    where_clause text := '';
-    join_list text := '';
-    column_select_list text := '';
-    column_equals_list text := '';
+    where_clause text;
+    join_list text;
+    column_select_list text;
 BEGIN
-    FOR i IN 1..num_tables LOOP
-        column_select_list := column_select_list || $$,
-                t$$ || i || '.label as t' || i || '_label';
-    END LOOP;
+    SELECT
+        string_agg($$,
+                t$$ || gs || '.label AS t' || gs || '_label', '')
+    INTO column_select_list
+    FROM
+        generate_series(1, num_tables) AS gs;
 
-    FOR i IN 1..num_tables LOOP
-        join_list := join_list || $$ INNER JOIN
-                table_$$ || i || ' AS t' || i || $$ ON
-                    t$$ || i || '.id = p.table_' || i || '_id';
-    END LOOP;
+    SELECT
+        string_agg($$ INNER JOIN
+                table_$$ || gs || ' AS t' || gs || $$ ON
+                    t$$ || gs || '.id = p.table_' || gs || '_id', '')
+    INTO join_list
+    FROM
+        generate_series(1, num_tables) AS gs;
 
-    IF label_equals IS NOT NULL THEN
-        FOR i IN 1..num_tables LOOP
-            column_equals_list := column_equals_list || $$
-                t$$ || i || $$.label = '$$ || label_equals || $$'$$;
-            IF i != num_tables THEN
-                column_equals_list := column_equals_list || ' AND ';
-            END IF;
-        END LOOP;
-
-        where_clause := $$
-            WHERE$$ || column_equals_list;
-    END IF;
+    SELECT
+        $$
+            WHERE
+                $$ || string_agg('t' || gs || $$.label = '$$ || label_equals || $$'$$, $$ AND
+                $$)
+    INTO where_clause
+    FROM
+        generate_series(1, num_tables) AS gs
+    WHERE
+        label_equals IS NOT NULL;
 
     RETURN format($$
             SELECT
