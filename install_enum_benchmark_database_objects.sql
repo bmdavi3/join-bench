@@ -54,34 +54,33 @@ CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra
 DECLARE
     extra_column_text text;
 BEGIN
+    SELECT
+        string_agg(', extra_column_' || gs || $$ varchar(20) default '12345678901234567890' $$, ' ')
+    INTO extra_column_text
+    FROM
+        generate_series(1, extra_columns) AS gs;
 
-SELECT
-    string_agg(', extra_column_' || gs || $$ varchar(20) default '12345678901234567890' $$, ' ')
-INTO extra_column_text
-FROM
-    generate_series(1, extra_columns) AS gs;
+    FOR i IN 1..num_tables LOOP
+        EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
 
-FOR i IN 1..num_tables LOOP
-    EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
+        RAISE NOTICE 'Creating and inserting into table...';
 
-    RAISE NOTICE 'Creating and inserting into table...';
+        EXECUTE format($$
+            CREATE TABLE table_%1$s (
+                id serial primary key
+                %3$s ,
+                label text not null
+            );
 
-    EXECUTE format($$
-        CREATE TABLE table_%1$s (
-            id serial primary key
-            %3$s ,
-            label text not null
-        );
+            INSERT INTO table_%1$s (label)
+            SELECT
+                'My Label #' || gs
+            FROM
+                generate_series(1, %2$s) AS gs;
+        $$, i, num_rows, extra_column_text);
 
-        INSERT INTO table_%1$s (label)
-        SELECT
-            'My Label #' || gs
-        FROM
-            generate_series(1, %2$s) AS gs;
-    $$, i, num_rows, extra_column_text);
-
-    RAISE NOTICE 'Done creating table';
-END LOOP;
+        RAISE NOTICE 'Done creating table';
+    END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
 
