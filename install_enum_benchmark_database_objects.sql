@@ -166,25 +166,24 @@ CREATE FUNCTION get_enum_query(num_tables integer, label_equals text) RETURNS te
 DECLARE
     where_clause text := '';
     column_select_list text := '';
-    column_equals_list text := '';
 BEGIN
-    FOR i IN 1..num_tables LOOP
-        column_select_list := column_select_list || $$,
-                label_$$ || i;
-    END LOOP;
+    SELECT
+        string_agg(',
+                label_' || gs, '')
+    INTO column_select_list
+    FROM
+        generate_series(1, num_tables) AS gs;
 
-    IF label_equals IS NOT NULL THEN
-        FOR i IN 1..num_tables LOOP
-            column_equals_list := column_equals_list || $$
-                label_$$ || i || $$ = '$$ || label_equals || $$'$$;
-            IF i != num_tables THEN
-                column_equals_list := column_equals_list || ' AND ';
-            END IF;
-        END LOOP;
-
-        where_clause := $$
-            WHERE$$ || column_equals_list;
-    END IF;
+    SELECT
+        '
+            WHERE
+                ' || string_agg('label_' || gs || ' = ' || $$'$$ || label_equals || $$'$$, ' AND
+                ')
+    INTO where_clause
+    FROM
+        generate_series(1, num_tables) AS gs
+    WHERE
+        label_equals IS NOT NULL;
 
     RETURN format($$
             SELECT
