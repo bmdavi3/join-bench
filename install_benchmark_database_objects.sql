@@ -3,20 +3,11 @@ CREATE FUNCTION create_chained_tables(num_tables integer, num_rows integer, extr
 DECLARE
     extra_column_text text;
 BEGIN
-    extra_column_text := '';
-
-    IF extra_columns > 0 THEN
-        extra_column_text := ', ';
-    END IF;
-
-
-    FOR i IN 1..extra_columns LOOP
-        extra_column_text := extra_column_text || 'extra_column_' || i || $$ varchar(20) default '12345678901234567890' $$;
-        IF i != extra_columns THEN
-            extra_column_text := extra_column_text || ', ';
-        END IF;
-    END LOOP;
-
+    SELECT
+        string_agg(', extra_column_' || gs || $$ varchar(20) default '12345678901234567890' $$, ' ')
+    INTO extra_column_text
+    FROM
+        generate_series(1, extra_columns) AS gs;
 
     DROP TABLE IF EXISTS table_1 CASCADE;
     EXECUTE format($$
@@ -26,14 +17,11 @@ BEGIN
         );
     $$, extra_column_text);
 
-
     INSERT INTO table_1 (id)
     SELECT
         nextval('table_1_id_seq')
     FROM
         generate_series(1, num_rows);
-
-
 
     FOR i IN 2..num_tables LOOP
         EXECUTE 'DROP TABLE IF EXISTS table_' || i || ' CASCADE;';
