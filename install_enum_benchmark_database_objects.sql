@@ -51,8 +51,43 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS create_lookup_tables(integer, integer, integer);
-CREATE FUNCTION create_lookup_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
+DROP FUNCTION IF EXISTS get_enum_query(integer, text);
+CREATE FUNCTION get_enum_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
+DECLARE
+    where_clause text := '';
+    column_select_list text := '';
+BEGIN
+    SELECT
+        string_agg(',
+                label_' || gs, '')
+    INTO column_select_list
+    FROM
+        generate_series(1, num_tables) AS gs;
+
+    SELECT
+        '
+            WHERE
+                ' || string_agg('label_' || gs || ' = ' || $$'$$ || label_equals || $$'$$, ' AND
+                ')
+    INTO where_clause
+    FROM
+        generate_series(1, num_tables) AS gs
+    WHERE
+        label_equals IS NOT NULL;
+
+    RETURN format($$
+            SELECT
+                id%1$s
+            FROM
+                primary_table %2$s;
+    $$, column_select_list, where_clause);
+END;
+$function_text$ LANGUAGE plpgsql;
+
+
+
+DROP FUNCTION IF EXISTS create_fk_tables(integer, integer, integer);
+CREATE FUNCTION create_fk_tables(num_tables integer, num_rows integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
     extra_column_text text;
 BEGIN
@@ -86,8 +121,8 @@ BEGIN
 END;
 $function_text$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS create_primary_table(integer, integer, integer);
-CREATE FUNCTION create_primary_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
+DROP FUNCTION IF EXISTS create_fk_using_table(integer, integer, integer);
+CREATE FUNCTION create_fk_using_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
     extra_column_text text;
     foreign_key_text text;
@@ -150,53 +185,9 @@ BEGIN
 END;
 $function_text$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS analyze_tables(integer);
-CREATE FUNCTION analyze_tables(num_tables integer) RETURNS void AS $function_text$
-BEGIN
 
-FOR i IN 1..num_tables LOOP
-    EXECUTE 'ANALYZE table_' || i || ';';
-END LOOP;
-END;
-$function_text$ LANGUAGE plpgsql;
-
-
-DROP FUNCTION IF EXISTS get_enum_query(integer, text);
-CREATE FUNCTION get_enum_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
-DECLARE
-    where_clause text := '';
-    column_select_list text := '';
-BEGIN
-    SELECT
-        string_agg(',
-                label_' || gs, '')
-    INTO column_select_list
-    FROM
-        generate_series(1, num_tables) AS gs;
-
-    SELECT
-        '
-            WHERE
-                ' || string_agg('label_' || gs || ' = ' || $$'$$ || label_equals || $$'$$, ' AND
-                ')
-    INTO where_clause
-    FROM
-        generate_series(1, num_tables) AS gs
-    WHERE
-        label_equals IS NOT NULL;
-
-    RETURN format($$
-            SELECT
-                id%1$s
-            FROM
-                primary_table %2$s;
-    $$, column_select_list, where_clause);
-END;
-$function_text$ LANGUAGE plpgsql;
-
-
-DROP FUNCTION IF EXISTS get_query(integer, text);
-CREATE FUNCTION get_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
+DROP FUNCTION IF EXISTS get_fk_query(integer, text);
+CREATE FUNCTION get_fk_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
 DECLARE
     where_clause text;
     join_list text;
@@ -237,6 +228,16 @@ BEGIN
 END;
 $function_text$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS analyze_tables(integer);
+CREATE FUNCTION analyze_tables(num_tables integer) RETURNS void AS $function_text$
+BEGIN
+
+FOR i IN 1..num_tables LOOP
+    EXECUTE 'ANALYZE table_' || i || ';';
+END LOOP;
+END;
+$function_text$ LANGUAGE plpgsql;
 
 DROP TABLE IF EXISTS benchmark_results;
 CREATE TABLE benchmark_results (
