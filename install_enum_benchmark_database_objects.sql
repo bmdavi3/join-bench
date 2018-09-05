@@ -3,13 +3,16 @@ CREATE FUNCTION create_enums(num_tables integer, num_rows integer) RETURNS void 
 DECLARE
     enum_label_text text := '';
 BEGIN
+    SELECT
+        string_agg($$'My Label #$$ || gs || $$'$$, ',')
+    INTO enum_label_text
+    FROM
+        generate_series(1, num_rows) AS gs;
 
-SELECT string_agg($$'My Label #$$ || gs || $$'$$, ',') INTO enum_label_text FROM generate_series(1, num_rows) AS gs;
-
-FOR i IN 1..num_tables LOOP
-    EXECUTE 'DROP TYPE IF EXISTS enum_' || i || ' CASCADE;';
-    EXECUTE 'CREATE TYPE enum_' || i || ' AS ENUM (' || enum_label_text || ');';
-END LOOP;
+    FOR i IN 1..num_tables LOOP
+        EXECUTE 'DROP TYPE IF EXISTS enum_' || i || ' CASCADE;';
+        EXECUTE 'CREATE TYPE enum_' || i || ' AS ENUM (' || enum_label_text || ');';
+    END LOOP;
 END;
 $function_text$ LANGUAGE plpgsql;
 
