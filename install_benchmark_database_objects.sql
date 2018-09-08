@@ -445,21 +445,21 @@ BEGIN
             PERFORM create_fk_using_table(benchmark.rows, benchmark.fk_tables, benchmark.extra_columns);
         END IF;
 
-        SELECT get_fk_query(benchmark.fk_tables, benchmark.label_equals) INTO query_text;
+        SELECT get_fk_query(benchmark.fk_tables, benchmark.where_clause) INTO query_text;
         RAISE NOTICE '%', query_text;
 
         FOR i IN 1..benchmark.iterations LOOP
             begin_time := clock_timestamp();
             EXECUTE query_text;
 
-            INSERT INTO fk_benchmark_results (rows, fk_tables, fk_rows, fk_extra_columns, extra_columns, label_equals, duration)
+            INSERT INTO fk_benchmark_results (rows, fk_tables, fk_rows, fk_extra_columns, extra_columns, where_clause, duration)
             SELECT
                 benchmark.rows,
                 benchmark.fk_tables,
                 benchmark.fk_rows,
                 benchmark.fk_extra_columns,
                 benchmark.extra_columns,
-                benchmark.label_equals,
+                benchmark.where_clause,
                 clock_timestamp() - begin_time;
         END LOOP;
     END LOOP;
@@ -480,20 +480,20 @@ BEGIN
             PERFORM create_enum_using_table(benchmark.rows, benchmark.enums, benchmark.possible_values, benchmark.extra_columns);
         END IF;
 
-        SELECT get_enum_query(benchmark.enums, benchmark.label_equals) INTO query_text;
+        SELECT get_enum_query(benchmark.enums, benchmark.where_clause) INTO query_text;
         RAISE NOTICE '%', query_text;
 
         FOR i IN 1..benchmark.iterations LOOP
             begin_time := clock_timestamp();
             EXECUTE query_text;
 
-            INSERT INTO enum_benchmark_results (rows, enums, possible_values, extra_columns, label_equals, duration)
+            INSERT INTO enum_benchmark_results (rows, enums, possible_values, extra_columns, where_clause, duration)
             SELECT
                 benchmark.rows,
                 benchmark.enums,
                 benchmark.possible_values,
                 benchmark.extra_columns,
-                benchmark.label_equals,
+                benchmark.where_clause,
                 clock_timestamp() - begin_time;
         END LOOP;
     END LOOP;

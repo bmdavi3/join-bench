@@ -3,10 +3,10 @@
         "join-type": "chained",
         "max-tables": 10,
         "max-rows": 10000,
-        "extra_columns": 2,
-        "max_id": 5,
+        "extra-columns": 2,
+        "max-id": 5,
         "create-indexes": true,
-        "output-filename": "benchmark_1",
+        "output-filename": "chained_benchmark_1",
         "plot-title": "My Chained Benchmark Title"
     },
     {
@@ -16,7 +16,7 @@
         "possible-enum-values": 10,
         "extra-columns": 2,
         "where-clause": true,
-        "output-filename": "benchmark_1",
+        "output-filename": "enum_benchmark_2",
         "plot-title": "My Enum Benchmark Title"
     },
     {
@@ -27,7 +27,7 @@
         "fk-extra-columns": 2,
         "extra-columns": 2,
         "where-clause": true,
-        "output-filename": "benchmark_1",
+        "output-filename": "foreign_key_benchmark_1",
         "plot-title": "My Foreign Key Benchmark Title"
     }
 ]

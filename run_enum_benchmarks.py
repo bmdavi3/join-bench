@@ -263,7 +263,7 @@ def create_chained_benchmarks(max_tables, max_rows, max_id, extra_columns, creat
 
 def execute_chained_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_indexes):
     cursor.execute("""
-        SELECT create_tables(%(max_tables)s, %(rows)s, %(extra_columns)s, %(create_indexes)s);
+        SELECT create_chained_tables(%(max_tables)s, %(rows)s, %(extra_columns)s, %(create_indexes)s);
     """, {
         'max_tables': max_tables,
         'rows': rows,
@@ -312,7 +312,7 @@ def execute_enum_benchmark(cursor, rows, enums, possible_values, extra_columns, 
 
     cursor.execute("""
         SELECT
-            run_enum_benchmarks(array_agg(ROW(s.a, %(rows)s, %(enums)s, %(possible_values)s, %(extra_columns)s, %(where_clause)s, 10)::enum_benchmark), False)
+            run_enum_benchmarks(array_agg(ROW(%(rows)s, s.a, %(possible_values)s, %(extra_columns)s, %(where_clause)s, 10)::enum_benchmark), False)
         FROM
             generate_series(1, %(enums)s) AS s(a);
     """, {
@@ -351,7 +351,7 @@ def execute_foreign_key_benchmark(cursor, rows, fk_tables, fk_rows, fk_extra_col
 
     cursor.execute("""
         SELECT
-            run_fk_benchmarks(array_agg(ROW(s.a, %(rows)s, %(fk_tables)s, %(fk_rows)s, %(fk_extra_columns)s, %(extra_columns)s, %(where_clause)s, 10)::fk_benchmark), False)
+            run_fk_benchmarks(array_agg(ROW(%(rows)s, s.a, %(fk_rows)s, %(fk_extra_columns)s, %(extra_columns)s, %(where_clause)s, 10)::fk_benchmark), False)
         FROM
             generate_series(1, %(fk_tables)s) AS s(a);
     """, {
