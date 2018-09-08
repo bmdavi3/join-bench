@@ -279,7 +279,7 @@ def execute_chained_benchmark(cursor, max_tables, rows, max_id, extra_columns, c
 
     cursor.execute("""
         SELECT
-            run_benchmarks(array_agg(ROW(s.a, %(rows)s, %(extra_columns)s, %(max_id)s, %(create_indexes)s, 10)::benchmark), False)
+            run_chained_benchmarks(array_agg(ROW(s.a, %(rows)s, %(extra_columns)s, %(max_id)s, %(create_indexes)s, 10)::chained_benchmark), False)
         FROM
             generate_series(2, %(max_tables)s) AS s(a);
     """, {
@@ -397,7 +397,7 @@ def run_chained_benchmarks(cursor, benchmarks, output_dir):
 
         with open(filename, 'w') as outfile:
             outfile.write("tables,rows,extra_columns,max_id,create_indexes,duration\n")
-            cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
+            cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM chained_benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
 
 
 if __name__ == "__main__":
