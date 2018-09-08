@@ -16,7 +16,7 @@
         "possible-enum-values": 10,
         "extra-columns": 2,
         "where-clause": true,
-        "output-filename": "enum_benchmark_2",
+        "output-filename": "enum_benchmark_1",
         "plot-title": "My Enum Benchmark Title"
     },
     {
