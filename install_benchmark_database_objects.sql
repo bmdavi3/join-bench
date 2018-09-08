@@ -331,8 +331,8 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-DROP TABLE IF EXISTS benchmark_results;
-CREATE TABLE benchmark_results (
+DROP TABLE IF EXISTS chained_benchmark_results;
+CREATE TABLE chained_benchmark_results (
     tables integer NOT NULL,
     rows integer NOT NULL,
     extra_columns integer NOT NULL,
@@ -341,8 +341,8 @@ CREATE TABLE benchmark_results (
     duration interval NOT NULL
 );
 
-DROP TYPE IF EXISTS benchmark CASCADE;
-CREATE TYPE benchmark AS (
+DROP TYPE IF EXISTS chained_benchmark CASCADE;
+CREATE TYPE chained_benchmark AS (
     tables integer,
     rows integer,
     extra_columns integer,
@@ -351,16 +351,16 @@ CREATE TYPE benchmark AS (
     iterations integer
 );
 
-DROP FUNCTION IF EXISTS run_benchmarks(benchmark[], boolean);
-CREATE FUNCTION run_benchmarks(benchmarks benchmark[], create_tables boolean) RETURNS void AS $function_text$
+DROP FUNCTION IF EXISTS run_chained_benchmarks(chained_benchmark[], boolean);
+CREATE FUNCTION run_chained_benchmarks(chained_benchmarks benchmark[], create_tables boolean) RETURNS void AS $function_text$
 DECLARE
-    benchmark benchmark;
+    benchmark chained_benchmark;
     begin_time timestamptz;
     query_text text;
 BEGIN
     FOREACH benchmark IN ARRAY benchmarks LOOP
         IF create_tables THEN
-            PERFORM create_tables(benchmark.tables, benchmark.rows, benchmark.create_indexes);
+            PERFORM create_chained_tables(benchmark.tables, benchmark.rows, benchmark.create_indexes);
         END IF;
 
         SELECT get_chained_query(benchmark.tables, benchmark.max_id) INTO query_text;
@@ -370,12 +370,12 @@ BEGIN
             begin_time := clock_timestamp();
             EXECUTE query_text;
 
-            INSERT INTO benchmark_results (tables, rows, extra_columns, max_id, create_indexes, duration)
+            INSERT INTO chained_benchmark_results (tables, rows, extra_columns, max_id, create_indexes, duration)
             SELECT
                 benchmark.tables,
                 benchmark.rows,
-            benchmark.extra_columns,
-            benchmark.max_id,
+                benchmark.extra_columns,
+                benchmark.max_id,
                 benchmark.create_indexes,
                 clock_timestamp() - begin_time;
         END LOOP;
