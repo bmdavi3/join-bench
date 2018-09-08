@@ -137,14 +137,14 @@ def create_foreign_key_benchmarks(max_primary_table_rows, max_fk_tables, fk_rows
     return benchmarks
 
 
-def create_enum_benchmarks(max_rows, enums, possible_enum_values, extra_columns, where_clause, output_filename):
+def create_enum_benchmarks(max_rows, enums, possible_values, extra_columns, where_clause, output_filename):
     benchmarks = []
     rows = 10
     while rows <= max_rows:
         benchmarks.append({
             'rows': rows,
             'enums': enums,
-            'possible_enum_values': possible_enum_values,
+            'possible_values': possible_values,
             'extra_columns': extra_columns,
             'where_clause': where_clause,
             'output_filename': output_filename,
@@ -276,20 +276,34 @@ def execute_foreign_key_benchmark(cursor, rows, fk_tables, fk_rows, fk_extra_col
     })
 
 
-def run_enum_benchmarks(cursor, benchmarks, output_dir):
+def run_foreign_key_benchmarks(cursor, benchmarks, output_dir):
     for benchmark in benchmarks:
-        execute_enum_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
+        execute_foreign_key_benchmark(cursor, benchmark['rows'], benchmark['fk_tables'], benchmark['fk_rows'],
+                                      benchmark['fk_extra_columns'], benchmark['extra_columns'], benchmark['where_clause'])
 
         filename = os.path.join(output_dir, '{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']))
 
         with open(filename, 'w') as outfile:
-            outfile.write("tables,rows,extra_columns,max_id,create_indexes,duration\n")
-            cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
+            outfile.write("rows,fk_tables,fk_rows,fk_extra_columns,extra_columns,where_clause,duration\n")
+            cursor.copy_to(outfile, """(SELECT rows, fk_tables, fk_rows, fk_extra_columns, extra_columns, where_clause, EXTRACT(EPOCH FROM duration) FROM fk_benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
+
+
+def run_enum_benchmarks(cursor, benchmarks, output_dir):
+    for benchmark in benchmarks:
+        execute_enum_benchmark(cursor, benchmark['rows'], benchmark['enums'], benchmark['possible_values'],
+                               benchmark['extra_columns'], benchmark['where_clause'])
+
+        filename = os.path.join(output_dir, '{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']))
+
+        with open(filename, 'w') as outfile:
+            outfile.write("rows,enums,possible_values,extra_columns,where_clause,duration\n")
+            cursor.copy_to(outfile, """(SELECT rows, enums, possible_values, extra_columns, where_clause, EXTRACT(EPOCH FROM duration) FROM enum_benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
 
 
 def run_chained_benchmarks(cursor, benchmarks, output_dir):
     for benchmark in benchmarks:
-        execute_chained_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
+        execute_chained_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'],
+                                  benchmark['extra_columns'], benchmark['create_indexes'])
 
         filename = os.path.join(output_dir, '{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']))
 
