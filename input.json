@@ -1,23 +1,33 @@
 [
     {
-        "graph-notes": "Left to right, the number of tables being joined is increasing, from 2 to max-tables.  We'll benchmark this setup with the number of rows in the primary table starting at 10, and increasing by 10x until we reach max-rows, with a plot line on the graph for each of these",
-        "join-type": "one-table-with-many-columns-that-reference-other-tables",
-        "max-tables": 20,
-        "max-rows": 1000,
-        "extra-columns": 0,
-        "create-indexes": false,
+        "join-type": "chained",
+        "max-tables": 10,
+        "max-rows": 10000,
+        "extra_columns": 2,
+        "max_id": 5,
+        "create-indexes": true,
         "output-filename": "benchmark_1",
-        "plot-title": "My Plot Title 1"
+        "plot-title": "My Chained Benchmark Title"
     },
     {
-        "graph-notes": "Left to right, the number of tables being joined is increasing, from 2 to max-tables.  We'll benchmark this setup with the number of rows starting at 10, and increasing by 10x until we reach max-rows, with a plot line on the graph for each of these",
-        "join-type": "many-tables-that-all-reference-the-previous-table",
-        "max-tables": 20,
-        "max-rows": 1000,
-        "max-id": 10,
-        "extra-columns": 0,
-        "create-indexes": false,
+        "join-type": "enums",
+        "max-rows": 10000,
+        "max-enums": 100,
+        "possible-enum-values": 10,
+        "extra-columns": 2,
+        "where-clause": true,
         "output-filename": "benchmark_1",
-        "plot-title": "My Plot Title 1"
+        "plot-title": "My Enum Benchmark Title"
+    },
+    {
+        "join-type": "foreign-keys",
+        "max-primary-table-rows": 10000,
+        "max-fk-tables": 100,
+        "fk-rows": 100,
+        "fk-extra-columns": 2,
+        "extra-columns": 2,
+        "where-clause": true,
+        "output-filename": "benchmark_1",
+        "plot-title": "My Foreign Key Benchmark Title"
     }
 ]
