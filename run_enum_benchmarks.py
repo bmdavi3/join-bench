@@ -38,7 +38,7 @@ def render_html(figure, filename):
             outfile.write(template.render(figure=figure))
 
 
-def generate_plotly(cursor, title, filename, output_dir):
+def generate_chained_plotly(cursor, title, filename, output_dir):
     cursor.execute("""
         WITH foo AS (
             SELECT
@@ -46,7 +46,7 @@ def generate_plotly(cursor, title, filename, output_dir):
                 rows,
                 EXTRACT(EPOCH FROM avg(duration)) AS duration
             FROM
-                benchmark_results
+                chained_benchmark_results
             GROUP BY
                 tables,
                 rows
@@ -81,6 +81,92 @@ def generate_plotly(cursor, title, filename, output_dir):
     render_html(json.dumps(figure.to_plotly_json()), full_filename)
 
 
+def generate_enum_plotly(cursor, title, filename, output_dir):
+    cursor.execute("""
+        WITH foo AS (
+            SELECT
+                enums,
+                rows,
+                EXTRACT(EPOCH FROM avg(duration)) AS duration
+            FROM
+                enum_benchmark_results
+            GROUP BY
+                enums,
+                rows
+            ORDER BY
+                enums,
+                rows
+        )
+        SELECT
+            rows,
+            array_agg(enums order by enums) AS enums,
+            array_agg(duration order by enums) AS durations
+        FROM
+            foo
+        GROUP BY
+            rows
+        ORDER BY
+            rows
+    """)
+
+    data = []
+
+    for row in cursor.fetchall():
+        trace = go.Scatter(x=row['enums'], y=row['durations'], name='{} rows'.format(row['rows']), legendgroup='whatever')
+
+        data.extend([trace])
+
+    layout = go.Layout(title=title, xaxis=dict(title='Enums'), yaxis=dict(title='Seconds', type='log', autorange=True))
+    figure = go.Figure(data=data, layout=layout)
+
+    full_filename = os.path.join(output_dir, filename)
+
+    render_html(json.dumps(figure.to_plotly_json()), full_filename)
+
+
+def generate_foreign_key_plotly(cursor, title, filename, output_dir):
+    cursor.execute("""
+        WITH foo AS (
+            SELECT
+                fk_tables,
+                rows,
+                EXTRACT(EPOCH FROM avg(duration)) AS duration
+            FROM
+                fk_benchmark_results
+            GROUP BY
+                fk_tables,
+                rows
+            ORDER BY
+                fk_tables,
+                rows
+        )
+        SELECT
+            rows,
+            array_agg(fk_tables order by fk_tables) AS fk_tables,
+            array_agg(duration order by fk_tables) AS durations
+        FROM
+            foo
+        GROUP BY
+            rows
+        ORDER BY
+            rows
+    """)
+
+    data = []
+
+    for row in cursor.fetchall():
+        trace = go.Scatter(x=row['fk_tables'], y=row['durations'], name='{} rows'.format(row['rows']), legendgroup='whatever')
+
+        data.extend([trace])
+
+    layout = go.Layout(title=title, xaxis=dict(title='Fk_tables'), yaxis=dict(title='Seconds', type='log', autorange=True))
+    figure = go.Figure(data=data, layout=layout)
+
+    full_filename = os.path.join(output_dir, filename)
+
+    render_html(json.dumps(figure.to_plotly_json()), full_filename)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Run a benchmark')
     parser.add_argument('filename', help='json input file')
@@ -103,18 +189,20 @@ def main():
             benchmarks = create_chained_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'],
                                                    bd['create-indexes'], bd['output-filename'])
             run_chained_benchmarks(cursor, benchmarks, args.output_dir)
-            generate_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
+            generate_chained_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
         elif bd['join-type'] == 'enums':
             truncate_enum_benchmark_results(cursor)
             benchmarks = create_enum_benchmarks(bd['max-rows'], bd['max-enums'], bd['possible-enum-values'],
                                                 bd['extra-columns'], bd['where-clause'], bd['output-filename'])
             run_enum_benchmarks(cursor, benchmarks, args.output_dir)
+            generate_enum_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
         elif bd['join-type'] == 'foreign-keys':
             truncate_foreign_key_benchmark_results(cursor)
             benchmarks = create_foreign_key_benchmarks(bd['max-primary-table-rows'], bd['max-fk-tables'], bd['fk-rows'],
                                                        bd['fk-extra-columns'], bd['extra-columns'], bd['where-clause'],
                                                        bd['output-filename'])
             run_foreign_key_benchmarks(cursor, benchmarks, args.output_dir)
+            generate_foreign_key_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
 
 
 def create_foreign_key_benchmarks(max_primary_table_rows, max_fk_tables, fk_rows, fk_extra_columns, extra_columns,
