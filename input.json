@@ -22,7 +22,7 @@
     {
         "join-type": "foreign-keys",
         "max-primary-table-rows": 10000,
-        "max-fk-tables": 100,
+        "max-fk-tables": 10,
         "fk-rows": 100,
         "fk-extra-columns": 2,
         "extra-columns": 2,
