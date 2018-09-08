@@ -143,10 +143,10 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS get_enum_query(integer, text);
-CREATE FUNCTION get_enum_query(enums integer, label_equals text) RETURNS text AS $function_text$
+DROP FUNCTION IF EXISTS get_enum_query(integer, boolean);
+CREATE FUNCTION get_enum_query(enums integer, where_clause boolean) RETURNS text AS $function_text$
 DECLARE
-    where_clause text := '';
+    where_clause_text text := '';
     column_select_list text := '';
 BEGIN
     SELECT
@@ -159,20 +159,20 @@ BEGIN
     SELECT
         '
             WHERE
-                ' || string_agg('label_' || gs || ' = ' || $$'$$ || label_equals || $$'$$, ' AND
+                ' || string_agg('label_' || gs || ' = ' || $$'$$ || 'My Label #1' || $$'$$, ' AND
                 ')
-    INTO where_clause
+    INTO where_clause_text
     FROM
         generate_series(1, enums) AS gs
     WHERE
-        label_equals IS NOT NULL;
+        where_clause;
 
     RETURN format($$
             SELECT
                 id%1$s
             FROM
                 primary_table %2$s;
-    $$, column_select_list, where_clause);
+    $$, column_select_list, where_clause_text);
 END;
 $function_text$ LANGUAGE plpgsql;
 
@@ -278,10 +278,10 @@ END;
 $function_text$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS get_fk_query(integer, text);
-CREATE FUNCTION get_fk_query(fk_tables integer, label_equals text) RETURNS text AS $function_text$
+DROP FUNCTION IF EXISTS get_fk_query(integer, boolean);
+CREATE FUNCTION get_fk_query(fk_tables integer, where_clause boolean) RETURNS text AS $function_text$
 DECLARE
-    where_clause text;
+    where_clause_text text;
     join_list text;
     column_select_list text;
 BEGIN
@@ -303,20 +303,20 @@ BEGIN
     SELECT
         $$
             WHERE
-                $$ || string_agg('t' || gs || $$.label = '$$ || label_equals || $$'$$, $$ AND
+                $$ || string_agg('t' || gs || $$.label = '$$ || 'My Label #1' || $$'$$, $$ AND
                 $$)
-    INTO where_clause
+    INTO where_clause_text
     FROM
         generate_series(1, fk_tables) AS gs
     WHERE
-        label_equals IS NOT NULL;
+        where_clause;
 
     RETURN format($$
             SELECT
                 p.id%1$s
             FROM
                 primary_table AS p%2$s %3$s;
-    $$, column_select_list, join_list, where_clause);
+    $$, column_select_list, join_list, where_clause_text);
 END;
 $function_text$ LANGUAGE plpgsql;
 
@@ -361,7 +361,7 @@ CREATE TABLE fk_benchmark_results (
     fk_rows integer NOT NULL,
     fk_extra_columns integer,
     extra_columns integer NOT NULL,
-    label_equals text,
+    where_clause boolean NOT NULL,
     duration interval NOT NULL
 );
 
@@ -372,7 +372,7 @@ CREATE TYPE fk_benchmark AS (
     fk_rows integer,
     fk_extra_columns integer,
     extra_columns integer,
-    label_equals text,
+    where_clause boolean,
     iterations integer
 );
 
@@ -384,7 +384,7 @@ CREATE TABLE enum_benchmark_results (
     enums integer NOT NULL,
     possible_values integer NOT NULL,
     extra_columns integer NOT NULL,
-    label_equals text,
+    where_clause boolean NOT NULL,
     duration interval NOT NULL
 );
 
@@ -394,7 +394,7 @@ CREATE TYPE enum_benchmark AS (
     enums integer,
     possible_values integer,
     extra_columns integer,
-    label_equals text,
+    where_clause boolean,
     iterations integer
 );
 

@@ -13,9 +13,21 @@ def install_benchmark_database_objects(cursor):
         cursor.execute(objects_file.read())
 
 
-def truncate_benchmark_results(cursor):
+def truncate_chained_benchmark_results(cursor):
     cursor.execute("""
-        TRUNCATE benchmark_results;
+        TRUNCATE chained_benchmark_results;
+    """)
+
+
+def truncate_enum_benchmark_results(cursor):
+    cursor.execute("""
+        TRUNCATE enum_benchmark_results;
+    """)
+
+
+def truncate_foreign_key_benchmark_results(cursor):
+    cursor.execute("""
+        TRUNCATE fk_benchmark_results;
     """)
 
 
@@ -86,13 +98,64 @@ def main():
     install_benchmark_database_objects(cursor)
 
     for bd in benchmark_descriptions:
-        truncate_benchmark_results(cursor)
-        benchmarks = create_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'], bd['create-indexes'], bd['output-filename'])
-        run_benchmarks(cursor, benchmarks, args.output_dir)
-        generate_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
+        if bd['join-type'] == 'chained':
+            truncate_chained_benchmark_results(cursor)
+            benchmarks = create_chained_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'],
+                                                   bd['create-indexes'], bd['output-filename'])
+            run_chained_benchmarks(cursor, benchmarks, args.output_dir)
+            generate_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
+        elif bd['join-type'] == 'enums':
+            truncate_enum_benchmark_results(cursor)
+            benchmarks = create_enum_benchmarks(bd['max-rows'], bd['max-enums'], bd['possible-enum-values'],
+                                                bd['extra-columns'], bd['where-clause'], bd['output-filename'])
+            run_enum_benchmarks(cursor, benchmarks, args.output_dir)
+        elif bd['join-type'] == 'foreign-keys':
+            truncate_foreign_key_benchmark_results(cursor)
+            benchmarks = create_foreign_key_benchmarks(bd['max-primary-table-rows'], bd['max-fk-tables'], bd['fk-rows'],
+                                                       bd['fk-extra-columns'], bd['extra-columns'], bd['where-clause'],
+                                                       bd['output-filename'])
+            run_foreign_key_benchmarks(cursor, benchmarks, args.output_dir)
 
 
-def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes, output_filename):
+def create_foreign_key_benchmarks(max_primary_table_rows, max_fk_tables, fk_rows, fk_extra_columns, extra_columns,
+                                  where_clause, output_filename):
+    benchmarks = []
+    rows = 10
+    while rows <= max_primary_table_rows:
+        benchmarks.append({
+            'rows': rows,
+            'fk_tables': max_fk_tables,
+            'fk_rows': fk_rows,
+            'fk_extra_columns': fk_extra_columns,
+            'extra_columns': extra_columns,
+            'where_clause': where_clause,
+            'output_filename': output_filename,
+        })
+
+        rows = rows * 10
+
+    return benchmarks
+
+
+def create_enum_benchmarks(max_rows, enums, possible_enum_values, extra_columns, where_clause, output_filename):
+    benchmarks = []
+    rows = 10
+    while rows <= max_rows:
+        benchmarks.append({
+            'rows': rows,
+            'enums': enums,
+            'possible_enum_values': possible_enum_values,
+            'extra_columns': extra_columns,
+            'where_clause': where_clause,
+            'output_filename': output_filename,
+        })
+
+        rows = rows * 10
+
+    return benchmarks
+
+
+def create_chained_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexes, output_filename):
     benchmarks = []
     rows = 10
     while rows <= max_rows:
@@ -110,7 +173,7 @@ def create_benchmarks(max_tables, max_rows, max_id, extra_columns, create_indexe
     return benchmarks
 
 
-def execute_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_indexes):
+def execute_chained_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_indexes):
     cursor.execute("""
         SELECT create_tables(%(max_tables)s, %(rows)s, %(extra_columns)s, %(create_indexes)s);
     """, {
@@ -140,9 +203,93 @@ def execute_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_in
     })
 
 
-def run_benchmarks(cursor, benchmarks, output_dir):
+def execute_enum_benchmark(cursor, rows, enums, possible_values, extra_columns, where_clause):
+    cursor.execute("""
+        SELECT create_enums(%(enums)s, %(possible_values)s);
+    """, {
+        'enums': enums,
+        'possible_values': possible_values,
+    })
+
+    cursor.execute("""
+        SELECT create_enum_using_table(%(rows)s, %(enums)s, %(possible_values)s, %(extra_columns)s);
+    """, {
+        'rows': rows,
+        'enums': enums,
+        'possible_values': possible_values,
+        'extra_columns': extra_columns,
+    })
+
+    cursor.execute("ANALYZE primary_table;")
+
+    cursor.execute("""
+        SELECT
+            run_enum_benchmarks(array_agg(ROW(s.a, %(rows)s, %(enums)s, %(possible_values)s, %(extra_columns)s, %(where_clause)s, 10)::enum_benchmark), False)
+        FROM
+            generate_series(1, %(enums)s) AS s(a);
+    """, {
+        'rows': rows,
+        'enums': enums,
+        'possible_values': possible_values,
+        'extra_columns': extra_columns,
+        'where_clause': where_clause,
+    })
+
+
+def execute_foreign_key_benchmark(cursor, rows, fk_tables, fk_rows, fk_extra_columns, extra_columns, where_clause):
+    cursor.execute("""
+        SELECT create_fk_tables(%(tables)s, %(rows)s, %(extra_columns)s);
+    """, {
+        'tables': fk_tables,
+        'rows': fk_rows,
+        'extra_columns': fk_extra_columns,
+    })
+
+    cursor.execute("""
+        SELECT create_fk_using_table(%(rows)s, %(fk_tables)s, %(extra_columns)s);
+    """, {
+        'rows': rows,
+        'fk_tables': fk_tables,
+        'extra_columns': extra_columns,
+    })
+
+    cursor.execute("ANALYZE primary_table;")
+
+    cursor.execute("""
+        SELECT analyze_tables(%(tables)s);
+    """, {
+        'tables': fk_tables,
+    })
+
+    cursor.execute("""
+        SELECT
+            run_fk_benchmarks(array_agg(ROW(s.a, %(rows)s, %(fk_tables)s, %(fk_rows)s, %(fk_extra_columns)s, %(extra_columns)s, %(where_clause)s, 10)::fk_benchmark), False)
+        FROM
+            generate_series(1, %(fk_tables)s) AS s(a);
+    """, {
+        'rows': rows,
+        'fk_tables': fk_tables,
+        'fk_rows': fk_rows,
+        'fk_extra_columns': fk_extra_columns,
+        'extra_columns': extra_columns,
+        'where_clause': where_clause,
+    })
+
+
+def run_enum_benchmarks(cursor, benchmarks, output_dir):
     for benchmark in benchmarks:
-        execute_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
+        execute_enum_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
+
+        filename = os.path.join(output_dir, '{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']))
+
+        with open(filename, 'w') as outfile:
+            outfile.write("tables,rows,extra_columns,max_id,create_indexes,duration\n")
+            cursor.copy_to(outfile, """(SELECT tables, rows, extra_columns, max_id, create_indexes, EXTRACT(EPOCH FROM duration) FROM benchmark_results WHERE rows = {})""".format(benchmark['rows']), sep=',')
+
+
+def run_chained_benchmarks(cursor, benchmarks, output_dir):
+    for benchmark in benchmarks:
+        execute_chained_benchmark(cursor, benchmark['max_tables'], benchmark['rows'], benchmark['max_id'], benchmark['extra_columns'], benchmark['create_indexes'])
 
         filename = os.path.join(output_dir, '{}_{}_rows.csv'.format(benchmark['output_filename'], benchmark['rows']))
 
