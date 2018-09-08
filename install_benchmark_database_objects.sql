@@ -368,11 +368,11 @@ CREATE TABLE fk_benchmark_results (
 
 DROP TYPE IF EXISTS fk_benchmark CASCADE;
 CREATE TYPE fk_benchmark AS (
-    rows integer NOT NULL,
-    fk_tables integer NOT NULL,
-    fk_rows integer NOT NULL,
+    rows integer,
+    fk_tables integer,
+    fk_rows integer,
     fk_extra_columns integer,
-    extra_columns integer NOT NULL,
+    extra_columns integer,
     label_equals text,
     iterations integer
 );
@@ -393,7 +393,7 @@ DROP TYPE IF EXISTS enum_benchmark CASCADE;
 CREATE TYPE enum_benchmark AS (
     rows integer,
     enums integer,
-    possible_values integer NOT NULL,
+    possible_values integer,
     extra_columns integer,
     label_equals text,
     iterations integer
@@ -401,7 +401,7 @@ CREATE TYPE enum_benchmark AS (
 
 
 DROP FUNCTION IF EXISTS run_chained_benchmarks(chained_benchmark[], boolean);
-CREATE FUNCTION run_chained_benchmarks(chained_benchmarks benchmark[], create_tables boolean) RETURNS void AS $function_text$
+CREATE FUNCTION run_chained_benchmarks(benchmarks chained_benchmark[], create_tables boolean) RETURNS void AS $function_text$
 DECLARE
     benchmark chained_benchmark;
     begin_time timestamptz;
