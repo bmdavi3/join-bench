@@ -9,7 +9,7 @@ from psycopg2.extras import DictCursor
 
 
 def install_benchmark_database_objects(cursor):
-    with open('install_enum_benchmark_database_objects.sql') as objects_file:
+    with open('install_benchmark_database_objects.sql') as objects_file:
         cursor.execute(objects_file.read())
 
 

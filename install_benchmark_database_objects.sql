@@ -88,7 +88,7 @@ $function_text$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS create_enums(integer, integer);
-CREATE FUNCTION create_enums(num_tables integer, num_rows integer) RETURNS void AS $function_text$
+CREATE FUNCTION create_enums(enums_to_create integer, possible_values integer) RETURNS void AS $function_text$
 DECLARE
     enum_label_text text := '';
 BEGIN
@@ -96,9 +96,9 @@ BEGIN
         string_agg($$'My Label #$$ || gs || $$'$$, ',')
     INTO enum_label_text
     FROM
-        generate_series(1, num_rows) AS gs;
+        generate_series(1, possible_values) AS gs;
 
-    FOR i IN 1..num_tables LOOP
+    FOR i IN 1..enums_to_create LOOP
         EXECUTE 'DROP TYPE IF EXISTS enum_' || i || ' CASCADE;';
         EXECUTE 'CREATE TYPE enum_' || i || ' AS ENUM (' || enum_label_text || ');';
     END LOOP;
@@ -107,7 +107,7 @@ $function_text$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS create_enum_using_table(integer, integer, integer, integer);
-CREATE FUNCTION create_enum_using_table(num_rows integer, num_enum_columns integer, num_enum_choices integer, extra_columns integer) RETURNS void AS $function_text$
+CREATE FUNCTION create_enum_using_table(num_rows integer, enum_columns integer, possible_values integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
     extra_column_text text;
     enum_column_text text := '';
@@ -121,7 +121,7 @@ BEGIN
         generate_series(1, extra_columns) AS gs;
 
 
-    SELECT string_agg(', label_' || gs || ' enum_' || gs, ' ' ORDER BY gs) INTO enum_column_text FROM generate_series(1, num_enum_columns) AS gs;
+    SELECT string_agg(', label_' || gs || ' enum_' || gs, ' ' ORDER BY gs) INTO enum_column_text FROM generate_series(1, enum_columns) AS gs;
 
     DROP TABLE IF EXISTS primary_table CASCADE;
     EXECUTE format($$
@@ -133,10 +133,10 @@ BEGIN
     $$, extra_column_text, enum_column_text);
 
     SELECT
-        'INSERT INTO primary_table (' || string_agg('label_' || gs, ', ' ORDER BY gs) || ') VALUES (' || string_agg($$ ('My Label #' || (SELECT ceil((random() * $$ || num_enum_choices || '))::int))::enum_' || gs, ', ') || ');'
+        'INSERT INTO primary_table (' || string_agg('label_' || gs, ', ' ORDER BY gs) || ') VALUES (' || string_agg($$ ('My Label #' || (SELECT ceil((random() * $$ || possible_values || '))::int))::enum_' || gs, ', ') || ');'
     INTO insert_text
     FROM
-        generate_series(1, num_enum_columns) AS gs;
+        generate_series(1, enum_columns) AS gs;
 
     EXECUTE insert_text;
 END;
@@ -144,7 +144,7 @@ $function_text$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS get_enum_query(integer, text);
-CREATE FUNCTION get_enum_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
+CREATE FUNCTION get_enum_query(enum_columns integer, label_equals text) RETURNS text AS $function_text$
 DECLARE
     where_clause text := '';
     column_select_list text := '';
@@ -154,7 +154,7 @@ BEGIN
                 label_' || gs, '')
     INTO column_select_list
     FROM
-        generate_series(1, num_tables) AS gs;
+        generate_series(1, enum_columns) AS gs;
 
     SELECT
         '
@@ -163,7 +163,7 @@ BEGIN
                 ')
     INTO where_clause
     FROM
-        generate_series(1, num_tables) AS gs
+        generate_series(1, enum_columns) AS gs
     WHERE
         label_equals IS NOT NULL;
 
@@ -214,7 +214,7 @@ $function_text$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS create_fk_using_table(integer, integer, integer);
-CREATE FUNCTION create_fk_using_table(num_rows integer, num_lookup_tables integer, extra_columns integer) RETURNS void AS $function_text$
+CREATE FUNCTION create_fk_using_table(num_rows integer, fk_columns integer, extra_columns integer) RETURNS void AS $function_text$
 DECLARE
     extra_column_text text;
     foreign_key_text text;
@@ -233,7 +233,7 @@ BEGIN
         string_agg(', table_' || gs || '_id integer references table_' || gs || '(id)', ' ')
     INTO foreign_key_text
     FROM
-        generate_series(1, num_lookup_tables) AS gs;
+        generate_series(1, fk_columns) AS gs;
 
     -- Create primary table
     RAISE NOTICE 'Creating primary table...';
@@ -251,10 +251,10 @@ BEGIN
         string_agg(', table_' || gs || '_id', ' ')
     INTO foreign_key_column_text
     FROM
-        generate_series(1, num_lookup_tables) AS gs;
+        generate_series(1, fk_columns) AS gs;
 
     -- Foreign key insert text section
-    FOR i IN 1..num_lookup_tables LOOP
+    FOR i IN 1..fk_columns LOOP
         foreign_key_insert_text := foreign_key_insert_text || format($$
             , ceil((random() * (
                 SELECT
@@ -279,7 +279,7 @@ $function_text$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS get_fk_query(integer, text);
-CREATE FUNCTION get_fk_query(num_tables integer, label_equals text) RETURNS text AS $function_text$
+CREATE FUNCTION get_fk_query(fk_columns integer, label_equals text) RETURNS text AS $function_text$
 DECLARE
     where_clause text;
     join_list text;
@@ -290,7 +290,7 @@ BEGIN
                 t$$ || gs || '.label AS t' || gs || '_label', '')
     INTO column_select_list
     FROM
-        generate_series(1, num_tables) AS gs;
+        generate_series(1, fk_columns) AS gs;
 
     SELECT
         string_agg($$ INNER JOIN
@@ -298,7 +298,7 @@ BEGIN
                     t$$ || gs || '.id = p.table_' || gs || '_id', '')
     INTO join_list
     FROM
-        generate_series(1, num_tables) AS gs;
+        generate_series(1, fk_columns) AS gs;
 
     SELECT
         $$
@@ -307,7 +307,7 @@ BEGIN
                 $$)
     INTO where_clause
     FROM
-        generate_series(1, num_tables) AS gs
+        generate_series(1, fk_columns) AS gs
     WHERE
         label_equals IS NOT NULL;
 
