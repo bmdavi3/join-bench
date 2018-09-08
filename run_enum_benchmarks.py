@@ -183,7 +183,8 @@ def main():
 
     install_benchmark_database_objects(cursor)
 
-    for bd in benchmark_descriptions:
+    for i, bd in enumerate(benchmark_descriptions):
+        print("Benchmark set {} of {}.  Type: {}".format(i + 1, len(benchmark_descriptions), bd['join-type']))
         if bd['join-type'] == 'chained':
             truncate_chained_benchmark_results(cursor)
             benchmarks = create_chained_benchmarks(bd['max-tables'], bd['max-rows'], bd['max-id'], bd['extra-columns'],
@@ -203,6 +204,8 @@ def main():
                                                        bd['output-filename'])
             run_foreign_key_benchmarks(cursor, benchmarks, args.output_dir)
             generate_foreign_key_plotly(cursor, bd['plot-title'], bd['output-filename'], args.output_dir)
+
+        print()
 
 
 def create_foreign_key_benchmarks(max_primary_table_rows, max_fk_tables, fk_rows, fk_extra_columns, extra_columns,
@@ -262,6 +265,8 @@ def create_chained_benchmarks(max_tables, max_rows, max_id, extra_columns, creat
 
 
 def execute_chained_benchmark(cursor, max_tables, rows, max_id, extra_columns, create_indexes):
+    print('  max_tables: {}, rows: {}, max_id: {}, extra_columns: {}, create_indexes: {}'.format(max_tables, rows, max_id, extra_columns, create_indexes))
+    print('    Creating tables...')
     cursor.execute("""
         SELECT create_chained_tables(%(max_tables)s, %(rows)s, %(extra_columns)s, %(create_indexes)s);
     """, {
@@ -271,12 +276,14 @@ def execute_chained_benchmark(cursor, max_tables, rows, max_id, extra_columns, c
         'create_indexes': create_indexes,
     })
 
+    print('    Analyzing tables...')
     cursor.execute("""
         SELECT analyze_tables(%(max_tables)s);
     """, {
         'max_tables': max_tables,
     })
 
+    print('    Running benchmark...')
     cursor.execute("""
         SELECT
             run_chained_benchmarks(array_agg(ROW(s.a, %(rows)s, %(extra_columns)s, %(max_id)s, %(create_indexes)s, 10)::chained_benchmark), False)
@@ -292,6 +299,9 @@ def execute_chained_benchmark(cursor, max_tables, rows, max_id, extra_columns, c
 
 
 def execute_enum_benchmark(cursor, rows, enums, possible_values, extra_columns, where_clause):
+    print('  rows: {}, enums: {}, possible_values: {}, extra_columns: {}, where_clause: {}'.format(rows, enums, possible_values, extra_columns, where_clause))
+
+    print('    Creating enums...')
     cursor.execute("""
         SELECT create_enums(%(enums)s, %(possible_values)s);
     """, {
@@ -299,6 +309,7 @@ def execute_enum_benchmark(cursor, rows, enums, possible_values, extra_columns, 
         'possible_values': possible_values,
     })
 
+    print('    Creating enum using table...')
     cursor.execute("""
         SELECT create_enum_using_table(%(rows)s, %(enums)s, %(possible_values)s, %(extra_columns)s);
     """, {
@@ -308,8 +319,10 @@ def execute_enum_benchmark(cursor, rows, enums, possible_values, extra_columns, 
         'extra_columns': extra_columns,
     })
 
+    print('    Analyzing...')
     cursor.execute("ANALYZE primary_table;")
 
+    print('    Running benchmark...')
     cursor.execute("""
         SELECT
             run_enum_benchmarks(array_agg(ROW(%(rows)s, s.a, %(possible_values)s, %(extra_columns)s, %(where_clause)s, 10)::enum_benchmark), False)
@@ -325,6 +338,9 @@ def execute_enum_benchmark(cursor, rows, enums, possible_values, extra_columns, 
 
 
 def execute_foreign_key_benchmark(cursor, rows, fk_tables, fk_rows, fk_extra_columns, extra_columns, where_clause):
+    print('  rows: {}, fk_tables: {}, fk_rows: {}, fk_extra_columns: {}, extra_columns: {}, where_clause: {}'.format(rows, fk_tables, fk_rows, fk_extra_columns, extra_columns, where_clause))
+
+    print('    Creating foreign key tables...')
     cursor.execute("""
         SELECT create_fk_tables(%(tables)s, %(rows)s, %(extra_columns)s);
     """, {
@@ -333,6 +349,14 @@ def execute_foreign_key_benchmark(cursor, rows, fk_tables, fk_rows, fk_extra_col
         'extra_columns': fk_extra_columns,
     })
 
+    print('    Analyzing foreign key tables...')
+    cursor.execute("""
+        SELECT analyze_tables(%(tables)s);
+    """, {
+        'tables': fk_tables,
+    })
+
+    print('    Creating primary table...')
     cursor.execute("""
         SELECT create_fk_using_table(%(rows)s, %(fk_tables)s, %(extra_columns)s);
     """, {
@@ -341,14 +365,10 @@ def execute_foreign_key_benchmark(cursor, rows, fk_tables, fk_rows, fk_extra_col
         'extra_columns': extra_columns,
     })
 
+    print('    Analyzing primary table...')
     cursor.execute("ANALYZE primary_table;")
 
-    cursor.execute("""
-        SELECT analyze_tables(%(tables)s);
-    """, {
-        'tables': fk_tables,
-    })
-
+    print('    Running benchmark...')
     cursor.execute("""
         SELECT
             run_fk_benchmarks(array_agg(ROW(%(rows)s, s.a, %(fk_rows)s, %(fk_extra_columns)s, %(extra_columns)s, %(where_clause)s, 10)::fk_benchmark), False)
