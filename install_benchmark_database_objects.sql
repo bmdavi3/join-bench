@@ -132,9 +132,8 @@ BEGIN
         );
     $$, extra_column_text, enum_column_text);
 
-    -- TODO: Make sure we're inserting 'rows' number of rows
     SELECT
-        'INSERT INTO primary_table (' || string_agg('label_' || gs, ', ' ORDER BY gs) || ') VALUES (' || string_agg($$ ('My Label #' || (SELECT ceil((random() * $$ || possible_values || '))::int))::enum_' || gs, ', ') || ');'
+        'INSERT INTO primary_table (' || string_agg('label_' || gs, ', ' ORDER BY gs) || ') SELECT ' || string_agg($$ ('My Label #' || (ceil((random() * $$ || possible_values || '))::int))::enum_' || gs, ', ') || ' FROM generate_series(1, ' || rows || ');'
     INTO insert_text
     FROM
         generate_series(1, enums) AS gs;
