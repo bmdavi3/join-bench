@@ -1,2 +1,2 @@
 build:
-	docker build --build-arg UID=$$(id -u) --build-arg GID=$$(id -g) -t angryjoin .
+	docker build --build-arg UID=$$(id -u) --build-arg GID=$$(id -g) -t join-bench .

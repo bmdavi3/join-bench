@@ -23,7 +23,7 @@ The database to target is specified by the standard postgres environment variabl
 Input
 ~~~~~
 
-Angryjoin takes a json file that describes the benchmarks to run.
+Join-bench takes a json file that describes the benchmarks to run.
 
 .. code::
 
